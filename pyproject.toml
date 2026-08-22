@@ -1,0 +1,22 @@
+[project]
+name = "hipo-mcp"
+version = "0.1.0"
+description = "HiPo Work MCP Server — 将招聘平台工具暴露为 MCP 工具供 AI Agent 调用"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Lin Tong" }]
+dependencies = [
+    "fastmcp>=1.0.0",
+    "httpx>=0.24.0",
+]
+
+[project.scripts]
+hipo-mcp = "hipo_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["hipo_mcp*"]
