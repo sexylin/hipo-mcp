@@ -46,14 +46,28 @@ class HiPoOAuthProvider(OAuthProvider):
         self._refresh_to_access: dict[str, str] = {}
         # 预授权会话：state → {user_id, role, api_key}
         self._pending_auth: dict[str, dict] = {}
+        # P0: 用户 API Key 映射（user_id → api_key），不存 OAuth token 中
+        self._user_api_keys: dict[str, str] = {}
+
+    def store_user_api_key(self, user_id: str, api_key: str):
+        """存储用户 API Key 到服务端内存（不暴露给 OAuth token）"""
+        self._user_api_keys[user_id] = api_key
+
+    def get_user_api_key(self, user_id: str) -> str:
+        """获取用户 API Key"""
+        return self._user_api_keys.get(user_id, "")
 
     def store_pending_auth(self, state: str, user_info: dict):
-        """存储 OAuth 流程中已验证的用户信息（登录页 → authorize 传递）"""
+        """存储 OAuth 流程中已验证的用户信息"""
+        user_info["_ts"] = time.time()
         self._pending_auth[state] = user_info
 
     def get_pending_auth(self, state: str) -> dict:
-        """取出并消费预授权信息"""
-        return self._pending_auth.pop(state, {})
+        """取出并消费预授权信息（5 分钟 TTL）"""
+        info = self._pending_auth.pop(state, {})
+        if info and info.get("_ts", 0) + 300 < time.time():
+            return {}  # P2: 超过 5 分钟过期
+        return info
 
     # ══════════════════════════════════════════
     # 客户端注册
@@ -136,10 +150,12 @@ class HiPoOAuthProvider(OAuthProvider):
         refresh_token_value = f"hipo_rt_{secrets.token_hex(32)}"
         now = int(time.time())
 
+        # P0: claims 不存 api_key，改为存到服务端内存映射
+        self._user_api_keys[user_id] = api_key
         self.access_tokens[access_token_value] = AccessToken(
             token=access_token_value, client_id=client.client_id,
             scopes=ac.scopes, expires_at=now + ACCESS_TOKEN_EXPIRY,
-            claims={"user_id": user_id, "role": role, "api_key": api_key},
+            claims={"user_id": user_id, "role": role},
         )
         self.refresh_tokens[refresh_token_value] = RefreshToken(
             token=refresh_token_value, client_id=client.client_id,
@@ -211,7 +227,16 @@ class HiPoOAuthProvider(OAuthProvider):
         )
 
     def revoke_token(self, token) -> None:
-        self._revoke_pair(access_token_str=token.token if hasattr(token, "token") else str(token))
+        """吊销 token（支持字符串或 AccessToken/RefreshToken 对象）"""
+        token_str = token.token if hasattr(token, "token") else str(token)
+        # 尝试作为 access token 吊销
+        if token_str in self.access_tokens:
+            self._revoke_pair(access_token_str=token_str)
+            return
+        # 尝试作为 refresh token 吊销
+        if token_str in self.refresh_tokens:
+            self._revoke_pair(refresh_token_str=token_str)
+            return
 
     # ══════════════════════════════════════════
     # 路由
@@ -219,11 +244,12 @@ class HiPoOAuthProvider(OAuthProvider):
 
     def get_routes(self, mcp_path: str = None) -> list:
         from starlette.routing import Route
-        from .routes import authorize_route, token_route, login_page_route
+        from .routes import authorize_route, token_route, login_page_route, revoke_route
         return [
             Route("/authorize", endpoint=authorize_route(self), methods=["GET", "POST"]),
             Route("/login", endpoint=login_page_route(self), methods=["GET", "POST"]),
             Route("/token", endpoint=token_route(self), methods=["POST"]),
+            Route("/revoke", endpoint=revoke_route(self), methods=["POST"]),
         ]
 
     # ══════════════════════════════════════════

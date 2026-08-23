@@ -52,9 +52,9 @@ def _require_role(ctx: Context, role: str):
 
 
 def _headers(ctx: Context) -> dict:
-    """构造请求头（带当前用户 API Key，通过 OAuth claims 中的 api_key）"""
+    """构造请求头（从 auth_provider 内存映射获取 API Key，不依赖 OAuth claims）"""
     u = _user(ctx)
-    key = u.get("api_key", "")
+    key = auth_provider.get_user_api_key(u.get("user_id", "")) if u.get("user_id") else ""
     return {"Content-Type": "application/json", "X-API-Key": key} if key else {"Content-Type": "application/json"}
 
 

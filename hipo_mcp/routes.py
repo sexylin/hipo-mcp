@@ -328,3 +328,16 @@ def token_route(provider):
         return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
 
     return handler
+
+
+def revoke_route(provider):
+    """POST /revoke → 吊销 token"""
+    async def handler(request: Request):
+        form = await request.form()
+        token = form.get("token")
+        if not token:
+            return JSONResponse({"error": "invalid_request", "error_description": "Missing token"}, status_code=400)
+        provider.revoke_token(token)
+        return JSONResponse({"ok": True})
+
+    return handler
