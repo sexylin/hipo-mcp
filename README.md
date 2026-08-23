@@ -1,78 +1,28 @@
 # HiPo Work MCP Server
 
-将 HiPo Work 招聘平台工具暴露为 MCP (Model Context Protocol) 工具，供 AI Agent (Claude Desktop、Hermes Agent、Cursor 等支持 MCP 的客户端) 调用。
+[![MCP Server](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io)
+[![OAuth 2.0](https://img.shields.io/badge/Auth-OAuth2.0-green)](https://oauth.net/2/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## 功能工具
+将 HiPo Work 招聘平台工具暴露为 MCP (Model Context Protocol) 工具，供 AI Agent 调用。支持 OAuth 2.0 自动授权，无需手动配置 API Key。
 
-| 工具名 | 说明 | 认证要求 |
-|--------|------|----------|
-| `send_verification_code` | 发送邮箱验证码 | 公开 |
-| `register_or_login` | 注册/登录，获取 API Key | 公开 |
-| `publish_job` | 发布招聘岗位（结构化条件） | employer |
-| `match_candidates` | 匹配候选人（含评分明细+工作经历） | employer |
-| `match_job_requirement` | 按已发布岗位 ID 自动匹配候选人 | employer |
-| `search_candidates` | 自然语言搜索候选人 | employer |
-| `get_stats` | 平台统计数据 | employer |
-| `market_analysis` | 市场分析 | employer |
-| `import_resume` | 导入简历（Agent 解析后传入结构化数据） | candidate |
+**适用客户端：** Claude Desktop、Hermes Agent、Cursor、VS Code、Cline 等所有支持 MCP 的客户端
 
-## 快速开始（本地测试）
+---
 
-```bash
-# 安装
-pip install hipo-mcp
+## 功能一览
 
-# 启动（stdio 模式，仅供本地测试）
-hipo-mcp
-```
+HiPo Work 是一个面向 AI Agent 的招聘平台：
 
-## 生产部署（云端 HTTP）
+- **求职者**：通过 Agent 上传简历（`import_resume`），AI 自动提取结构化数据
+- **招聘方**：通过 Agent 发布岗位（`publish_job`）、智能匹配候选人（`match_candidates`）、市场分析（`market_analysis`）
+- **自动认证**：OAuth 2.0 授权码流程，无需手动管理 Key
 
-### 1. 安装依赖
+---
 
-```bash
-pip install fastmcp httpx uvicorn
-```
+## 快速开始
 
-### 2. 启动服务
-
-```bash
-uvicorn hipo_mcp.server:app --host 127.0.0.1 --port 8003
-```
-
-### 3. Nginx 反代（必须配 HTTPS）
-
-```nginx
-# 强制 HTTPS
-server {
-    listen 80;
-    server_name hypework.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name hypework.com;
-
-    # SSL 证书（用 certbot 或云厂商签发）
-    ssl_certificate /etc/ssl/certs/hypework.com.pem;
-    ssl_certificate_key /etc/ssl/private/hypework.com.key;
-
-    location /mcp {
-        proxy_pass http://127.0.0.1:8003;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_read_timeout 300s;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
-
-> **⚠️ 安全要求：** MCP 通信包含 API Key，必须使用 HTTPS。
-> 未配置 HTTPS 之前，API Key 会在网络上明文传输。
-
-### 4. MCP 客户端配置
+### 1. 配置 MCP 客户端
 
 **Claude Desktop** (`claude_desktop_config.json`):
 
@@ -80,10 +30,7 @@ server {
 {
   "mcpServers": {
     "hipo": {
-      "url": "https://hypework.com/mcp",
-      "headers": {
-        "X-API-Key": "fb_live_xxxxx"
-      }
+      "url": "https://hipowork.com/mcp"
     }
   }
 }
@@ -94,38 +41,145 @@ server {
 ```yaml
 mcp_servers:
   hipo:
-    url: "https://hypework.com/mcp"
-    headers:
-      X-API-Key: "fb_live_xxxxx"
+    url: "https://hipowork.com/mcp"
 ```
 
-## 获取 API Key
+**VS Code / Cursor** MCP 配置面板，添加：
 
-1. 调用 `send_verification_code` 工具（传入邮箱）
-2. 调用 `register_or_login` 工具（传入邮箱 + 验证码 + 角色）
-3. **完整 API Key 已发送到该邮箱**，请查收邮件
-4. 将 API Key 配置到 MCP 客户端的 `X-API-Key` header
+```
+https://hipowork.com/mcp
+```
 
-⚠️ API Key 24 小时过期，过期后需重新注册获取。
+### 2. 首次授权
+
+1. 首次调用工具时，自动打开浏览器 `https://hipowork.com/authorize`
+2. 输入邮箱 → 获取验证码 → 输入验证码
+3. 授权完成，自动返回客户端，**后续无需再操作**
+
+> Token 30 天有效，自动刷新，无需手动配置 API Key。
+
+---
+
+## 工具列表
+
+| 工具名 | 说明 | 认证 |
+|--------|------|------|
+| `send_verification_code` | 发送邮箱验证码（注册/登录前调用） | 公开 |
+| `register_or_login` | 邮箱验证码注册/登录 | 公开 |
+| `publish_job` | 发布招聘岗位（结构化条件） | employer |
+| `match_candidates` | 匹配候选人（含评分明细+工作经历） | employer |
+| `match_job_requirement` | 按岗位 ID 自动匹配候选人 | employer |
+| `search_candidates` | 自然语言搜索候选人 | employer |
+| `get_stats` | 平台统计数据 | employer |
+| `market_analysis` | 技能/行业人才供需分析 | employer |
+| `import_resume` | 导入简历（Agent 解析后传入结构化数据） | candidate |
+
+---
 
 ## 认证机制
 
-**每个用户独立 API Key**（通过 `X-API-Key` header 传入），按角色控制权限：
+### OAuth 2.0（推荐）
 
-- 公开工具：`send_verification_code`、`register_or_login`
-- employer 工具：`publish_job`、`match_candidates`、`search_candidates`、`get_stats`、`market_analysis`、`match_job_requirement`
-- candidate 工具：`import_resume`
-- 角色不符返回 `{"error": "权限不足：需要 X 角色"}`
+- 完整的 OAuth 授权码流程（RFC 6749）
+- PKCE 支持
+- Access token 30 天 + Refresh token 90 天自动轮换
+- 支持 token 吊销（`POST /revoke`）
 
-## 环境变量
+### API Key（备选）
 
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `HIPO_BACKEND_URL` | 否 | 后端地址，默认 `http://127.0.0.1:8000` |
+客户端不支持 OAuth 时，可手动配置 `X-API-Key` header：
 
-## 开发
+```json
+{
+  "mcpServers": {
+    "hipo": {
+      "url": "https://hipowork.com/mcp",
+      "headers": {
+        "X-API-Key": "fb_live_xxx"
+      }
+    }
+  }
+}
+```
+
+1. 调用 `send_verification_code` 发送验证码
+2. 调用 `register_or_login` 注册（响应返回完整 Key，同时发到邮箱）
+3. ⚠️ API Key 30 天有效，过期后重新调用 `register_or_login`
+
+---
+
+## 部署
+
+### 启动服务
 
 ```bash
+# 安装
+pip install fastmcp httpx uvicorn
+
+# 启动
+HIPO_BACKEND_URL=http://127.0.0.1:8000 \
+HIPO_MCP_BASE_URL=https://hipowork.com \
+uvicorn hipo_mcp.server:app --host 127.0.0.1 --port 8003
+```
+
+### Nginx 反代（必须配 HTTPS）
+
+```nginx
+server {
+    listen 80;
+    server_name hipowork.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name hipowork.com;
+
+    ssl_certificate /etc/letsencrypt/live/hipowork.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/hipowork.com/privkey.pem;
+
+    location /mcp {
+        proxy_pass http://127.0.0.1:8003;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 300s;
+    }
+
+    location = /authorize { proxy_pass http://127.0.0.1:8003; }
+    location = /login     { proxy_pass http://127.0.0.1:8003; }
+    location = /token     { proxy_pass http://127.0.0.1:8003; }
+    location = /revoke    { proxy_pass http://127.0.0.1:8003; }
+}
+```
+
+> ⚠️ MCP 通信包含用户凭证，必须使用 HTTPS。
+
+---
+
+## 本地开发
+
+```bash
+git clone https://github.com/sexylin/hipo-mcp.git
+cd hipo-mcp
 pip install -e .
+
+# stdio 模式
+hipo-mcp
+
+# HTTP 模式
 uvicorn hipo_mcp.server:app --host 0.0.0.0 --port 8003 --reload
 ```
+
+### 环境变量
+
+| 变量 | 必填 | 说明 | 默认值 |
+|------|------|------|--------|
+| `HIPO_BACKEND_URL` | 否 | 后端 API 地址 | `http://127.0.0.1:8000` |
+| `HIPO_MCP_BASE_URL` | 否 | MCP 服务公开地址 | `http://127.0.0.1:8003` |
+
+---
+
+## License
+
+MIT
