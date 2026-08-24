@@ -58,6 +58,25 @@ def _headers(ctx: Context) -> dict:
     return {"Content-Type": "application/json", "X-API-Key": key} if key else {"Content-Type": "application/json"}
 
 
+def _normalize_preferred(preferred: dict) -> dict:
+    """将简单的 preferred 结构（字符串数组）转换为后端需要的结构化对象。
+
+    示例:
+      {"skills": ["Rust", "DeFi"]}
+      → {"skills": [{"name": "Rust", "weight": 1.0}, {"name": "DeFi", "weight": 1.0}]}
+    """
+    if not preferred:
+        return {}
+    p = dict(preferred)
+    skills = p.get("skills")
+    if isinstance(skills, list) and skills and isinstance(skills[0], str):
+        p["skills"] = [{"name": s, "weight": 1.0} for s in skills]
+    keywords = p.get("keywords")
+    if isinstance(keywords, list) and keywords and isinstance(keywords[0], str):
+        p["keywords"] = [{"text": k, "weight": 1.0} for k in keywords]
+    return p
+
+
 def _get(ctx: Context, path: str, timeout: int = 15) -> dict:
     with httpx.Client(timeout=timeout) as client:
         resp = client.get(f"{API_BASE}{path}", headers=_headers(ctx))
@@ -183,7 +202,7 @@ def match_candidates(ctx: Context, required: list, preferred: dict = None, max_r
     """匹配候选人"""
     err = _require_role(ctx, "employer")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
-    result = _post(ctx, "/agent/match-candidates", {"required": required, "preferred": preferred or {}, "max_results": max_results})
+    result = _post(ctx, "/agent/match-candidates", {"required": required, "preferred": _normalize_preferred(preferred or {}), "max_results": max_results})
     return json.dumps(result, ensure_ascii=False, default=str)
 
 
