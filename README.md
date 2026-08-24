@@ -163,20 +163,7 @@ server {
 git clone https://github.com/sexylin/hipo-mcp.git
 cd hipo-mcp
 pip install -e .
-
-# stdio 模式
-hipo-mcp
-
-# HTTP 模式
-uvicorn hipo_mcp.server:app --host 0.0.0.0 --port 8003 --reload
 ```
-
-### 环境变量
-
-| 变量 | 必填 | 说明 | 默认值 |
-|------|------|------|--------|
-| `HIPO_BACKEND_URL` | 否 | 后端 API 地址 | `http://127.0.0.1:8000` |
-| `HIPO_MCP_BASE_URL` | 否 | MCP 服务公开地址 | `http://127.0.0.1:8003` |
 
 ---
 
