@@ -54,7 +54,16 @@ class HiPoOAuthProvider(OAuthProvider):
         self._user_api_keys[user_id] = api_key
 
     def get_user_api_key(self, user_id: str) -> str:
-        """获取用户 API Key"""
+        """获取用户 API Key（顺带清理过期条目）"""
+        # 定期清理：如果映射表过大，清理掉没有有效 token 的条目
+        if len(self._user_api_keys) > 1000:
+            now = time.time()
+            valid_user_ids = set()
+            for at in self.access_tokens.values():
+                claims = getattr(at, "claims", {}) or {}
+                if at.expires_at > now:
+                    valid_user_ids.add(claims.get("user_id"))
+            self._user_api_keys = {u: k for u, k in self._user_api_keys.items() if u in valid_user_ids}
         return self._user_api_keys.get(user_id, "")
 
     def store_pending_auth(self, state: str, user_info: dict):
@@ -89,6 +98,13 @@ class HiPoOAuthProvider(OAuthProvider):
 
         if client.client_id not in self.clients:
             raise AuthorizeError("unauthorized_client", f"Client '{client.client_id}' not registered")
+
+        # 校验 redirect_uri 白名单（防止授权码劫持）
+        if client.redirect_uris and params.redirect_uri not in client.redirect_uris:
+            raise AuthorizeError(
+                "invalid_request",
+                f"redirect_uri '{params.redirect_uri}' 不在客户端注册的白名单中",
+            )
 
         # 通过 state 获取用户信息
         user_info = self.get_pending_auth(params.state or "")

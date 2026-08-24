@@ -13,6 +13,9 @@ from starlette.responses import HTMLResponse, RedirectResponse, JSONResponse
 BACKEND_URL = os.environ.get("HIPO_BACKEND_URL", "http://127.0.0.1:8000")
 API_BASE = f"{BACKEND_URL}/api/v1"
 
+# MCP 层限流桶：IP → [timestamp]
+_send_code_bucket: dict[str, list] = {}
+
 
 # ══════════════════════════════════════════
 # 登录页
@@ -133,9 +136,10 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 
 def _login_page(**kwargs) -> HTMLResponse:
+    import html as _html
     html = LOGIN_PAGE_HTML
     for k, v in kwargs.items():
-        html = html.replace("{" + k + "}", str(v or ""))
+        html = html.replace("{" + k + "}", str(_html.escape(str(v or ""))))
     # 清理剩余未替换的占位符
     import re
     html = re.sub(r"\{[a-z_]+\}", "", html)
@@ -143,10 +147,11 @@ def _login_page(**kwargs) -> HTMLResponse:
 
 
 def _code_page(**kwargs) -> HTMLResponse:
+    import html as _html
     import re
     html = CODE_PAGE_HTML
     for k, v in kwargs.items():
-        html = html.replace("{" + k + "}", str(v or ""))
+        html = html.replace("{" + k + "}", str(_html.escape(str(v or ""))))
     html = re.sub(r"\{[a-z_]+\}", "", html)
     return HTMLResponse(html)
 
@@ -200,6 +205,19 @@ def authorize_route(provider):
             return JSONResponse({"error": "unauthorized_client", "error_description": "Client not registered"}, status_code=400)
 
         if step == "send_code":
+            # MCP 层限流：防止批量轰炸验证码发送接口
+            client_ip = request.client.host if request.client else "unknown"
+            now = time.time()
+            _send_code_bucket[client_ip].append(now)
+            # 清理 60s 前的记录
+            _send_code_bucket[client_ip] = [t for t in _send_code_bucket[client_ip] if t > now - 60]
+            if len(_send_code_bucket[client_ip]) > 5:
+                return _login_page(
+                    client_id=client_id, redirect_uri=redirect_uri, state=state,
+                    scope=scope, code_challenge=code_challenge,
+                    code_challenge_method=code_challenge_method,
+                    email=email, message="请求过于频繁，请稍后再试",
+                )
             # 发送验证码到邮箱
             try:
                 async with httpx.AsyncClient(timeout=10.0) as hc:
