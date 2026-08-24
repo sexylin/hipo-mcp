@@ -1,15 +1,32 @@
 [project]
 name = "hipo-mcp"
-version = "0.1.0"
-description = "HiPo Work MCP Server — 将招聘平台工具暴露为 MCP 工具供 AI Agent 调用"
+version = "0.2.0"
+description = "HiPo Work MCP Server — AI 招聘平台 MCP 接口（OAuth 2.0 认证）"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Lin Tong" }]
+authors = [{ name = "Lin Tong", email = "sexylin2010@gmail.com" }]
+keywords = ["mcp", "mcp-server", "oauth2", "recruitment", "hiring", "ai-agent", "job-matching", "简历", "招聘"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "fastmcp>=1.0.0",
     "httpx>=0.24.0",
 ]
+
+[project.urls]
+homepage = "https://hipowork.com"
+repository = "https://github.com/sexylin/hipo-mcp"
+"Bug Tracker" = "https://github.com/sexylin/hipo-mcp/issues"
 
 [project.scripts]
 hipo-mcp = "hipo_mcp.server:main"
