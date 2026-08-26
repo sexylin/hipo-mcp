@@ -5,6 +5,7 @@ import time
 import secrets
 import os
 import httpx
+from collections import defaultdict
 from urllib.parse import urlencode
 
 from starlette.requests import Request
@@ -14,7 +15,7 @@ BACKEND_URL = os.environ.get("HIPO_BACKEND_URL", "http://127.0.0.1:8000")
 API_BASE = f"{BACKEND_URL}/api/v1"
 
 # MCP 层限流桶：IP → [timestamp]
-_send_code_bucket: dict[str, list] = {}
+_send_code_bucket: dict[str, list] = defaultdict(list)
 
 
 # ══════════════════════════════════════════

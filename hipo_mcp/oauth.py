@@ -218,15 +218,17 @@ class HiPoOAuthProvider(OAuthProvider):
         requested = set(scopes)
         if not requested.issubset(original):
             raise TokenError("invalid_scope", "Requested scopes exceed authorized scopes")
+
+        # 先保存旧 access token 的身份，再吊销旧 token 对。
+        # _revoke_pair 会删除旧 access token，不能在之后再读取 claims。
+        old_access_token = self._refresh_to_access.get(rt.token)
+        old_at = self.access_tokens.get(old_access_token) if old_access_token else None
+        claims = dict(getattr(old_at, "claims", {}) or {})
         self._revoke_pair(refresh_token_str=rt.token)
 
         access_token_value = f"hipo_at_{secrets.token_hex(32)}"
         refresh_token_value = f"hipo_rt_{secrets.token_hex(32)}"
         now = int(time.time())
-
-        access_token_str = self._refresh_to_access.get(rt.token)
-        old_at = self.access_tokens.get(access_token_str) if access_token_str else None
-        claims = getattr(old_at, "claims", {}) or {}
 
         self.access_tokens[access_token_value] = AccessToken(
             token=access_token_value, client_id=client.client_id,

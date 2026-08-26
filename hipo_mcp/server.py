@@ -41,10 +41,12 @@ mcp = FastMCP(
 # ── 辅助：从工具上下文获取当前用户 ──
 
 def _user(ctx: Context) -> dict:
-    """从 ctx.token 获取当前用户信息"""
+    """从当前 HTTP 请求的 OAuth access token 获取用户信息。"""
     try:
-        if ctx.token and hasattr(ctx.token, "claims"):
-            return ctx.token.claims or {}
+        from fastmcp.server.dependencies import get_access_token
+        token = get_access_token()
+        if token is not None:
+            return token.claims or {}
     except Exception:
         pass
     return {}
