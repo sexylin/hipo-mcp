@@ -200,7 +200,7 @@ def authorize_route(provider):
         email = form.get("email", "")
 
         # 验证 client
-        client = provider.get_client(client_id)
+        client = await provider.get_client(client_id)
         if not client:
             return JSONResponse({"error": "unauthorized_client", "error_description": "Client not registered"}, status_code=400)
 
@@ -296,7 +296,7 @@ def authorize_route(provider):
                 code_challenge_method=code_challenge_method if code_challenge_method else None,
             )
 
-            redirect_url = provider.authorize(client, auth_params)
+            redirect_url = await provider.authorize(client, auth_params)
             return RedirectResponse(redirect_url, status_code=302)
 
         return JSONResponse({"error": "invalid_request"}, status_code=400)
@@ -315,7 +315,7 @@ def token_route(provider):
         code_verifier = form.get("code_verifier")
         refresh_token = form.get("refresh_token")
 
-        client = provider.get_client(client_id) if client_id else None
+        client = await provider.get_client(client_id) if client_id else None
 
         if grant_type == "authorization_code":
             if not code or not client:
@@ -323,12 +323,17 @@ def token_route(provider):
             ac = await provider.load_authorization_code(client, code)
             if not ac:
                 return JSONResponse({"error": "invalid_grant", "error_description": "Invalid or expired code"}, status_code=400)
-            # PKCE 校验
-            if ac.code_challenge and code_verifier:
-                import hashlib, base64
+            # 授权码只能在原始 redirect_uri 上兑换，防止 code 被转发到其他回调地址。
+            if not redirect_uri or str(ac.redirect_uri) != str(redirect_uri):
+                return JSONResponse({"error": "invalid_grant", "error_description": "redirect_uri mismatch"}, status_code=400)
+            # PKCE：存在 code_challenge 时必须提供并严格校验 code_verifier。
+            if ac.code_challenge:
+                if not code_verifier:
+                    return JSONResponse({"error": "invalid_grant", "error_description": "Missing code_verifier"}, status_code=400)
+                import hashlib, base64, hmac
                 digest = hashlib.sha256(code_verifier.encode()).digest()
                 verifier_b64 = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
-                if verifier_b64 != ac.code_challenge:
+                if not hmac.compare_digest(verifier_b64, ac.code_challenge):
                     return JSONResponse({"error": "invalid_grant", "error_description": "PKCE verification failed"}, status_code=400)
             token = await provider.exchange_authorization_code(client, ac)
             return JSONResponse(token.model_dump(exclude_none=True))

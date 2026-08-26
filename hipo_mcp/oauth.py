@@ -35,8 +35,8 @@ REFRESH_TOKEN_EXPIRY = 3600 * 24 * 90     # 90 天
 class HiPoOAuthProvider(OAuthProvider):
     """OAuth 授权提供者：对接 HiPo 邮箱验证码登录"""
 
-    def __init__(self, base_url: str):
-        super().__init__(base_url=base_url)
+    def __init__(self, base_url: str, **kwargs):
+        super().__init__(base_url=base_url, **kwargs)
         # 内存存储
         self.clients: dict[str, OAuthClientInformationFull] = {}
         self.auth_codes: dict[str, AuthorizationCode] = {}
@@ -48,6 +48,8 @@ class HiPoOAuthProvider(OAuthProvider):
         self._pending_auth: dict[str, dict] = {}
         # P0: 用户 API Key 映射（user_id → api_key），不存 OAuth token 中
         self._user_api_keys: dict[str, str] = {}
+        # 授权码对应的服务端凭证，避免把 API Key 放进 AuthorizationCode.subject
+        self._auth_code_api_keys: dict[str, str] = {}
 
     def store_user_api_key(self, user_id: str, api_key: str):
         """存储用户 API Key 到服务端内存（不暴露给 OAuth token）"""
@@ -82,17 +84,17 @@ class HiPoOAuthProvider(OAuthProvider):
     # 客户端注册
     # ══════════════════════════════════════════
 
-    def get_client(self, client_id: str) -> Optional[OAuthClientInformationFull]:
+    async def get_client(self, client_id: str) -> Optional[OAuthClientInformationFull]:
         return self.clients.get(client_id)
 
-    def register_client(self, client_info: OAuthClientInformationFull) -> None:
+    async def register_client(self, client_info: OAuthClientInformationFull) -> None:
         self.clients[client_info.client_id] = client_info
 
     # ══════════════════════════════════════════
     # 授权码生成
     # ══════════════════════════════════════════
 
-    def authorize(self, client: OAuthClientInformationFull, params: AuthorizationParams) -> str:
+    async def authorize(self, client: OAuthClientInformationFull, params: AuthorizationParams) -> str:
         """生成授权码并返回重定向 URI。从 _pending_auth 获取用户信息。"""
         from mcp.server.auth.handlers.authorize import construct_redirect_uri
 
@@ -130,8 +132,9 @@ class HiPoOAuthProvider(OAuthProvider):
             scopes=scopes_list,
             expires_at=expires_at,
             code_challenge=params.code_challenge,
-            subject=json.dumps({"user_id": user_id, "role": role, "api_key": api_key}),
+            subject=json.dumps({"user_id": user_id, "role": role}),
         )
+        self._auth_code_api_keys[code_value] = api_key
 
         return construct_redirect_uri(
             str(params.redirect_uri), code=code_value, state=params.state
@@ -154,13 +157,13 @@ class HiPoOAuthProvider(OAuthProvider):
         if ac.code not in self.auth_codes:
             raise TokenError("invalid_grant", "Authorization code not found or already used")
         self.auth_codes.pop(ac.code, None)
+        api_key = self._auth_code_api_keys.pop(ac.code, "")
 
         subject = getattr(ac, "subject", None) or ""
         try: user_meta = json.loads(subject) if subject else {}
         except: user_meta = {}
         user_id = user_meta.get("user_id", "unknown")
         role = user_meta.get("role", "candidate")
-        api_key = user_meta.get("api_key", "")
 
         access_token_value = f"hipo_at_{secrets.token_hex(32)}"
         refresh_token_value = f"hipo_rt_{secrets.token_hex(32)}"
@@ -259,14 +262,25 @@ class HiPoOAuthProvider(OAuthProvider):
     # ══════════════════════════════════════════
 
     def get_routes(self, mcp_path: str = None) -> list:
+        """返回 OAuth 标准元数据路由与 HiPo 自定义登录/吊销路由。"""
         from starlette.routing import Route
         from .routes import authorize_route, token_route, login_page_route, revoke_route
-        return [
-            Route("/authorize", endpoint=authorize_route(self), methods=["GET", "POST"]),
+
+        # 保留父类生成的 OAuth discovery / protected-resource metadata 路由。
+        standard_routes = super().get_routes(mcp_path)
+        routes = [
+            route for route in standard_routes
+            if getattr(route, "path", "") not in {"/authorize", "/token", "/revoke"}
+        ]
+        # GET 展示登录页，POST 处理邮箱验证码并签发授权码。
+        routes.extend([
+            Route("/authorize", endpoint=login_page_route(self), methods=["GET"]),
+            Route("/authorize", endpoint=authorize_route(self), methods=["POST"]),
             Route("/login", endpoint=login_page_route(self), methods=["GET", "POST"]),
             Route("/token", endpoint=token_route(self), methods=["POST"]),
             Route("/revoke", endpoint=revoke_route(self), methods=["POST"]),
-        ]
+        ])
+        return routes
 
     # ══════════════════════════════════════════
     # 内部

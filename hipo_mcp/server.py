@@ -18,9 +18,18 @@ API_BASE = f"{BACKEND_URL}/api/v1"
 
 # ── OAuth Provider ──
 from .oauth import HiPoOAuthProvider
+from fastmcp.server.auth.auth import ClientRegistrationOptions, RevocationOptions
 
 MCP_BASE_URL = os.environ.get("HIPO_MCP_BASE_URL", "http://127.0.0.1:8003")
-auth_provider = HiPoOAuthProvider(base_url=MCP_BASE_URL)
+auth_provider = HiPoOAuthProvider(
+    base_url=MCP_BASE_URL,
+    client_registration_options=ClientRegistrationOptions(
+        enabled=True,
+        valid_scopes=["openid", "profile"],
+        default_scopes=["openid", "profile"],
+    ),
+    revocation_options=RevocationOptions(enabled=True),
+)
 
 # 创建 MCP Server（带 OAuth 认证）
 mcp = FastMCP(
