@@ -30,7 +30,7 @@ HiPo Work 是一个面向 AI Agent 的招聘平台：
 {
   "mcpServers": {
     "hipo": {
-      "url": "https://hipowork.com/mcp"
+      "url": "https://mcp.hipowork.com/mcp"
     }
   }
 }
@@ -41,13 +41,13 @@ HiPo Work 是一个面向 AI Agent 的招聘平台：
 ```yaml
 mcp_servers:
   hipo:
-    url: "https://hipowork.com/mcp"
+    url: "https://mcp.hipowork.com/mcp"
 ```
 
 **VS Code / Cursor** MCP 配置面板，添加：
 
 ```
-https://hipowork.com/mcp
+https://mcp.hipowork.com/mcp
 ```
 
 ### 2. 首次授权
@@ -93,7 +93,7 @@ https://hipowork.com/mcp
 {
   "mcpServers": {
     "hipo": {
-      "url": "https://hipowork.com/mcp",
+      "url": "https://mcp.hipowork.com/mcp",
       "headers": {
         "X-API-Key": "fb_live_xxx"
       }
@@ -103,7 +103,7 @@ https://hipowork.com/mcp
 ```
 
 1. 调用 `send_verification_code` 发送验证码
-2. 调用 `register_or_login` 注册（响应返回完整 Key，同时发到邮箱）
+2. 调用 `register_or_login` 注册（完整 API Key 只通过邮箱发送，MCP 响应只返回 Key 前缀）
 3. ⚠️ API Key 30 天有效，过期后重新调用 `register_or_login`
 
 ---
@@ -118,7 +118,7 @@ pip install fastmcp httpx uvicorn
 
 # 启动
 HIPO_BACKEND_URL=http://127.0.0.1:8000 \
-HIPO_MCP_BASE_URL=https://hipowork.com \
+HIPO_MCP_BASE_URL=https://mcp.hipowork.com \
 uvicorn hipo_mcp.server:app --host 127.0.0.1 --port 8003
 ```
 
