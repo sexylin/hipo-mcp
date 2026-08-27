@@ -14,7 +14,7 @@
 
 HiPo Work 是一个面向 AI Agent 的招聘平台：
 
-- **求职者**：通过 Agent 上传简历（`import_resume`），AI 自动提取结构化数据
+- **求职者**：通过 Agent 导入结构化简历（`import_resume`），可保留工作经历、项目经历、教育经历、技能、证书和语言能力
 - **招聘方**：通过 Agent 发布岗位（`publish_job`）、智能匹配候选人（`match_candidates`）、市场分析（`market_analysis`）
 - **自动认证**：OAuth 2.0 授权码流程，无需手动管理 Key
 
@@ -52,7 +52,7 @@ https://mcp.hipowork.com/mcp
 
 ### 2. 首次授权
 
-1. 首次调用工具时，自动打开浏览器 `https://hipowork.com/authorize`
+1. 首次调用工具时，自动打开浏览器 `https://mcp.hipowork.com/authorize`
 2. 输入邮箱 → 获取验证码 → 输入验证码
 3. 授权完成，自动返回客户端，**后续无需再操作**
 
@@ -72,7 +72,7 @@ https://mcp.hipowork.com/mcp
 | `search_candidates` | 自然语言搜索候选人 | employer |
 | `get_stats` | 平台统计数据 | employer |
 | `market_analysis` | 技能/行业人才供需分析 | employer |
-| `import_resume` | 导入简历（Agent 解析后传入结构化数据） | candidate |
+| `import_resume` | 导入简历（Agent 解析后传入结构化数据，包含工作/项目/教育经历） | candidate |
 
 ---
 
@@ -124,32 +124,34 @@ uvicorn hipo_mcp.server:app --host 127.0.0.1 --port 8003
 
 ### Nginx 反代（必须配 HTTPS）
 
+MCP 使用独立子域名，所有 MCP、OAuth 和 metadata 路由统一反代到 MCP 服务；新增路由无需逐条修改 nginx。
+
 ```nginx
 server {
     listen 80;
-    server_name hipowork.com;
+    server_name mcp.hipowork.com;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name hipowork.com;
+    server_name mcp.hipowork.com;
 
     ssl_certificate /etc/letsencrypt/live/hipowork.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/hipowork.com/privkey.pem;
 
-    location /mcp {
+    location / {
         proxy_pass http://127.0.0.1:8003;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Authorization $http_authorization;
+        proxy_buffering off;
+        proxy_request_buffering off;
         proxy_read_timeout 300s;
     }
-
-    location = /authorize { proxy_pass http://127.0.0.1:8003; }
-    location = /login     { proxy_pass http://127.0.0.1:8003; }
-    location = /token     { proxy_pass http://127.0.0.1:8003; }
-    location = /revoke    { proxy_pass http://127.0.0.1:8003; }
 }
 ```
 

@@ -274,12 +274,13 @@ def market_analysis(ctx: Context, keyword: str = None, industry: str = None, loc
 
 @mcp.tool(
     name="import_resume",
-    description="导入简历（需要 candidate 角色）。Agent 自行用 LLM 解析简历文本为结构化数据后传入。",
+    description="导入简历（需要 candidate 角色）。Agent 自行解析简历，完整传入工作经历、项目经历、教育经历、技能等结构化数据。项目经历可选。",
 )
 def import_resume(
     ctx: Context,
     basic_info: dict,
     work_experiences: list = None,
+    projects: list = None,
     education: list = None,
     skills: list = None,
     certificates: list = None,
@@ -291,6 +292,7 @@ def import_resume(
     result = _post(ctx, "/agent/import-resume", {
         "basic_info": basic_info,
         "work_experiences": work_experiences or [],
+        "projects": projects or [],
         "education": education or [],
         "skills": skills or [],
         "certificates": certificates or [],
