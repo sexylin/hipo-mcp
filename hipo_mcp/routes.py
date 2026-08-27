@@ -70,6 +70,13 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
     <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
     <input type="hidden" name="step" value="send_code">
     <div class="form-group">
+      <label>账号角色</label>
+      <select name="role" required>
+        <option value="candidate" {role_candidate_selected}>求职者（candidate）</option>
+        <option value="employer" {role_employer_selected}>招聘方（employer）</option>
+      </select>
+    </div>
+    <div class="form-group">
       <label>邮箱</label>
       <input type="email" name="email" placeholder="you@example.com" value="{email}" required>
     </div>
@@ -123,6 +130,7 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
     <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
     <input type="hidden" name="step" value="verify">
     <input type="hidden" name="email" value="{email}">
+    <input type="hidden" name="role" value="{role}">
     <div class="form-group">
       <label>输入验证码</label>
       <input type="text" name="code" placeholder="6 位验证码" maxlength="6" required>
@@ -169,6 +177,9 @@ def login_page_route(provider):
         code_challenge = params.get("code_challenge", "")
         code_challenge_method = params.get("code_challenge_method", "S256")
         email = params.get("email", "")
+        role = params.get("role", "candidate")
+        if role not in ("candidate", "employer"):
+            role = "candidate"
 
         return _login_page(
             client_id=client_id,
@@ -178,6 +189,9 @@ def login_page_route(provider):
             code_challenge=code_challenge,
             code_challenge_method=code_challenge_method,
             email=email,
+            role=role,
+            role_candidate_selected="selected" if role == "candidate" else "",
+            role_employer_selected="selected" if role == "employer" else "",
             message="",
         )
 
@@ -185,10 +199,7 @@ def login_page_route(provider):
 
 
 def authorize_route(provider):
-    """处理登录表单提交（POST /authorize）：
-    - step=send_code → 发送验证码，显示验证码输入页
-    - step=verify → 校验验证码，生成 auth code，重定向回客户端
-    """
+    """处理登录表单提交：发送验证码或校验验证码并生成授权码。"""
     async def handler(request: Request):
         form = await request.form()
         client_id = form.get("client_id", "")
@@ -199,95 +210,89 @@ def authorize_route(provider):
         code_challenge_method = form.get("code_challenge_method", "S256")
         step = form.get("step", "send_code")
         email = form.get("email", "")
+        role = form.get("role", "candidate")
+        if role not in ("candidate", "employer"):
+            role = "candidate"
 
-        # 验证 client
         client = await provider.get_client(client_id)
         if not client:
-            return JSONResponse({"error": "unauthorized_client", "error_description": "Client not registered"}, status_code=400)
+            return JSONResponse(
+                {"error": "unauthorized_client", "error_description": "Client not registered"},
+                status_code=400,
+            )
+
+        page_context = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "state": state,
+            "scope": scope,
+            "code_challenge": code_challenge,
+            "code_challenge_method": code_challenge_method,
+            "email": email,
+            "role": role,
+            "role_candidate_selected": "selected" if role == "candidate" else "",
+            "role_employer_selected": "selected" if role == "employer" else "",
+        }
 
         if step == "send_code":
-            # MCP 层限流：防止批量轰炸验证码发送接口
+            # MCP 层限流：防止批量轰炸验证码发送接口。
             client_ip = request.client.host if request.client else "unknown"
             now = time.time()
             _send_code_bucket[client_ip].append(now)
-            # 清理 60s 前的记录
-            _send_code_bucket[client_ip] = [t for t in _send_code_bucket[client_ip] if t > now - 60]
+            _send_code_bucket[client_ip] = [
+                timestamp for timestamp in _send_code_bucket[client_ip] if timestamp > now - 60
+            ]
             if len(_send_code_bucket[client_ip]) > 5:
-                return _login_page(
-                    client_id=client_id, redirect_uri=redirect_uri, state=state,
-                    scope=scope, code_challenge=code_challenge,
-                    code_challenge_method=code_challenge_method,
-                    email=email, message="请求过于频繁，请稍后再试",
-                )
-            # 发送验证码到邮箱
+                return _login_page(**page_context, message="请求过于频繁，请稍后再试")
+
             try:
                 async with httpx.AsyncClient(timeout=10.0) as hc:
                     resp = await hc.post(f"{API_BASE}/auth/send-code", json={"email": email})
                     if resp.status_code != 200:
                         detail = resp.json().get("detail", {})
                         msg = detail.get("message", "发送失败") if isinstance(detail, dict) else str(detail)
-                        return _login_page(
-                            client_id=client_id, redirect_uri=redirect_uri, state=state,
-                            scope=scope, code_challenge=code_challenge,
-                            code_challenge_method=code_challenge_method,
-                            email=email, message=f'<div class="error">{msg}</div>',
-                        )
-                return _code_page(
-                    client_id=client_id, redirect_uri=redirect_uri, state=state,
-                    scope=scope, code_challenge=code_challenge,
-                    code_challenge_method=code_challenge_method,
-                    email=email, redirect_uri_q=redirect_uri,
-                )
-            except Exception as e:
+                        return _login_page(**page_context, message=f'<div class="error">{msg}</div>')
+
+                return _code_page(**page_context, redirect_uri_q=redirect_uri)
+            except Exception as exc:
                 return _login_page(
-                    client_id=client_id, redirect_uri=redirect_uri, state=state,
-                    scope=scope, code_challenge=code_challenge,
-                    code_challenge_method=code_challenge_method,
-                    email=email, message=f'<div class="error">发送失败：{str(e)[:80]}</div>',
+                    **page_context,
+                    message=f'<div class="error">发送失败：{str(exc)[:80]}</div>',
                 )
 
         if step == "verify":
-            # 校验验证码并登录（role 自动推断：candidate）
             code = form.get("code", "")
             try:
                 async with httpx.AsyncClient(timeout=10.0) as hc:
                     resp = await hc.post(
                         f"{API_BASE}/auth/register-or-login",
-                        json={"email": email, "code": code, "role": "candidate"},
+                        json={"email": email, "code": code, "role": role},
                     )
                     if resp.status_code != 200:
                         detail = resp.json().get("detail", {})
                         msg = detail.get("message", "验证失败") if isinstance(detail, dict) else str(detail)
                         return _code_page(
-                            client_id=client_id, redirect_uri=redirect_uri, state=state,
-                            scope=scope, code_challenge=code_challenge,
-                            code_challenge_method=code_challenge_method,
-                            email=email, redirect_uri_q=redirect_uri,
+                            **page_context,
+                            redirect_uri_q=redirect_uri,
                             error=msg,
                         )
                     user_data = resp.json()
                     api_key = user_data.get("api_key_secret", "")
-            except Exception as e:
+            except Exception as exc:
                 return _code_page(
-                    client_id=client_id, redirect_uri=redirect_uri, state=state,
-                    scope=scope, code_challenge=code_challenge,
-                    code_challenge_method=code_challenge_method,
-                    email=email, redirect_uri_q=redirect_uri,
-                    error=f"登录失败：{str(e)[:80]}",
+                    **page_context,
+                    redirect_uri_q=redirect_uri,
+                    error=f"登录失败：{str(exc)[:80]}",
                 )
 
-            # 登录成功 → 通过 state 预存用户信息
+            # 登录成功：state 中只暂存用户身份和服务端凭证映射所需信息。
             from mcp.server.auth.provider import AuthorizationParams
-            from urllib.parse import parse_qs, urlencode
 
             provider.store_pending_auth(state, {
                 "user_id": user_data.get("user_id", ""),
-                "role": user_data.get("role", "candidate"),
+                "role": user_data.get("role", role),
                 "api_key": api_key,
             })
-
-            # 客户端已通过 POST 提交了所有必要参数，现在直接调 authorize 生成 auth code
-            # 构造完整 AuthorizationParams
             auth_params = AuthorizationParams(
                 redirect_uri=redirect_uri,
                 redirect_uri_provided_explicitly=True,
@@ -296,7 +301,6 @@ def authorize_route(provider):
                 code_challenge=code_challenge,
                 code_challenge_method=code_challenge_method if code_challenge_method else None,
             )
-
             redirect_url = await provider.authorize(client, auth_params)
             return RedirectResponse(redirect_url, status_code=302)
 
