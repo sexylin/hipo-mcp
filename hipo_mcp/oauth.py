@@ -90,7 +90,7 @@ class HiPoOAuthProvider(OAuthProvider):
             redirect_uri=params.redirect_uri,
             redirect_uri_provided_explicitly=params.redirect_uri_provided_explicitly,
             scopes=scopes,
-            expires_at=time.time() + AUTH_CODE_EXPIRY,
+            expires_at=int(time.time()) + AUTH_CODE_EXPIRY,
             code_challenge=params.code_challenge,
             subject=json.dumps({"user_id": user_id, "role": role}),
         )
@@ -102,7 +102,7 @@ class HiPoOAuthProvider(OAuthProvider):
         auth_code = self.auth_codes.get(code)
         if not auth_code or auth_code.client_id != client.client_id:
             return None
-        if auth_code.expires_at < time.time():
+        if auth_code.expires_at < int(time.time()):
             self.auth_codes.pop(code, None)
             return None
         return auth_code
@@ -111,7 +111,7 @@ class HiPoOAuthProvider(OAuthProvider):
         self, user_id: str, client_id: str, role: str, scopes: list[str]
     ) -> dict:
         if not MCP_INTERNAL_SECRET:
-            raise TokenError("server_error", "MCP OAuth internal secret is not configured")
+            raise TokenError("invalid_grant", "HiPo OAuth internal secret is not configured")
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
@@ -137,7 +137,7 @@ class HiPoOAuthProvider(OAuthProvider):
 
     async def _refresh_backend_token(self, refresh_token: str, client_id: str) -> dict:
         if not MCP_INTERNAL_SECRET:
-            raise TokenError("server_error", "MCP OAuth internal secret is not configured")
+            raise TokenError("invalid_grant", "HiPo OAuth internal secret is not configured")
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
@@ -179,14 +179,14 @@ class HiPoOAuthProvider(OAuthProvider):
             token=access_token,
             client_id=client_id,
             scopes=scopes,
-            expires_at=time.time() + expires_in,
+            expires_at=int(time.time()) + expires_in,
             claims={"user_id": user_id, "role": role},
         )
         self.refresh_tokens[refresh_token] = RefreshToken(
             token=refresh_token,
             client_id=client_id,
             scopes=scopes,
-            expires_at=time.time() + REFRESH_TOKEN_EXPIRY,
+            expires_at=int(time.time()) + REFRESH_TOKEN_EXPIRY,
         )
         self._access_to_refresh[access_token] = refresh_token
         self._refresh_to_access[refresh_token] = access_token
@@ -218,7 +218,7 @@ class HiPoOAuthProvider(OAuthProvider):
         access_token = self.access_tokens.get(token)
         if not access_token:
             return None
-        if access_token.expires_at is not None and access_token.expires_at < time.time():
+        if access_token.expires_at is not None and access_token.expires_at < int(time.time()):
             self._revoke_pair(access_token_str=token)
             return None
         return access_token
@@ -232,7 +232,7 @@ class HiPoOAuthProvider(OAuthProvider):
         refresh_token = self.refresh_tokens.get(token)
         if not refresh_token or refresh_token.client_id != client.client_id:
             return None
-        if refresh_token.expires_at is not None and refresh_token.expires_at < time.time():
+        if refresh_token.expires_at is not None and refresh_token.expires_at < int(time.time()):
             self._revoke_pair(refresh_token_str=token)
             return None
         return refresh_token
