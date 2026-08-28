@@ -25,8 +25,14 @@ auth_provider = HiPoOAuthProvider(
     base_url=MCP_BASE_URL,
     client_registration_options=ClientRegistrationOptions(
         enabled=True,
-        valid_scopes=["openid", "profile"],
-        default_scopes=["openid", "profile"],
+        valid_scopes=[
+            "profile",
+            "candidate:read",
+            "candidate:write",
+            "employer:read",
+            "employer:write",
+        ],
+        default_scopes=["profile"],
     ),
     revocation_options=RevocationOptions(enabled=True),
 )
@@ -46,10 +52,25 @@ def _user(ctx: Context) -> dict:
         from fastmcp.server.dependencies import get_access_token
         token = get_access_token()
         if token is not None:
-            return token.claims or {}
+            claims = token.claims or {}
+            # Backend 签发的 Token 标准 claim 名为 sub；MCP 角色仍从 role 读取。
+            if "user_id" not in claims and claims.get("sub"):
+                claims = dict(claims)
+                claims["user_id"] = claims["sub"]
+            return claims
     except Exception:
         pass
     return {}
+
+
+def _oauth_access_token_value() -> str:
+    """读取当前 MCP 请求的原生 HiPo OAuth access token。"""
+    try:
+        from fastmcp.server.dependencies import get_access_token
+        token = get_access_token()
+        return token.token if token is not None else ""
+    except Exception:
+        return ""
 
 
 def _require_role(ctx: Context, role: str):
@@ -63,10 +84,13 @@ def _require_role(ctx: Context, role: str):
 
 
 def _headers(ctx: Context) -> dict:
-    """构造请求头（从 auth_provider 内存映射获取 API Key，不依赖 OAuth claims）"""
-    u = _user(ctx)
-    key = auth_provider.get_user_api_key(u.get("user_id", "")) if u.get("user_id") else ""
-    return {"Content-Type": "application/json", "X-API-Key": key} if key else {"Content-Type": "application/json"}
+    token = _oauth_access_token_value()
+    if not token:
+        return {"Content-Type": "application/json"}
+    return {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
 
 
 def _normalize_preferred(preferred: dict) -> dict:
@@ -91,7 +115,7 @@ def _normalize_preferred(preferred: dict) -> dict:
 def _get(ctx: Context, path: str, timeout: int = 15) -> dict:
     with httpx.Client(timeout=timeout) as client:
         resp = client.get(f"{API_BASE}{path}", headers=_headers(ctx))
-        if resp.status_code == 401: raise ValueError("API Key 无效或已过期，请重新获取")
+        if resp.status_code == 401: raise ValueError("HiPo Work OAuth 授权无效或已过期，请重新授权")
         if resp.status_code == 403: raise ValueError("权限不足，请确认账号角色")
         if resp.status_code == 404: raise ValueError("资源不存在")
         if resp.status_code >= 500: raise ValueError("后端服务暂时不可用，请稍后重试")
@@ -102,7 +126,7 @@ def _get(ctx: Context, path: str, timeout: int = 15) -> dict:
 def _post(ctx: Context, path: str, body: dict = None, timeout: int = 15) -> dict:
     with httpx.Client(timeout=timeout) as client:
         resp = client.post(f"{API_BASE}{path}", json=body or {}, headers=_headers(ctx))
-        if resp.status_code == 401: raise ValueError("API Key 无效或已过期，请重新获取")
+        if resp.status_code == 401: raise ValueError("HiPo Work OAuth 授权无效或已过期，请重新授权")
         if resp.status_code == 403: raise ValueError("权限不足，请确认账号角色")
         if resp.status_code == 422:
             detail = resp.json().get("detail", "参数格式错误")
@@ -165,17 +189,15 @@ def register_or_login(email: str, code: str, role: str = "candidate") -> str:
             return json.dumps({"error": "请求过于频繁，请稍后重试"}, ensure_ascii=False)
         resp.raise_for_status()
         result = resp.json()
+    # 新的 MCP/OAuth 登录接口已统一不返回 API Key。
     return json.dumps({
         "user_id": result.get("user_id"),
         "email": result.get("email"),
         "role": result.get("role"),
         "is_new_user": result.get("is_new_user", False),
-        "api_key_prefix": result.get("api_key_prefix"),
-        "message": result.get("message", "注册/登录成功"),
-        "注意": "完整 API Key 已发送到你的邮箱，请查收。你也可以直接在浏览器中打开 OAuth 授权页面完成登录，无需手动配置 Key。",
+        "message": result.get("message", "注册/登录成功，请继续完成 OAuth 授权"),
         "oauth_authorize_url": f"{MCP_BASE_URL}/authorize",
     }, ensure_ascii=False)
-
 
 # ── 招聘方工具（employer）──
 

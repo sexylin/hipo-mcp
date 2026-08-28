@@ -1,88 +1,62 @@
-"""HiPo Work OAuth Provider — 完整 OAuth 授权服务器
+"""HiPo Work OAuth Provider.
 
-用户流程：
-1. MCP 客户端发现 OAuth 支持 → 打开浏览器到 /authorize
-2. 显示登录页（邮箱+验证码）
-3. 用户验证成功后 → 生成 auth code → 重定向回客户端
-4. 客户端用 code 换 access_token + refresh_token
-5. 后续请求自动带 Bearer token
+HiPo Work is the authorization server for its MCP clients. After the user
+finishes the email login page, the MCP authorization code is exchanged for a
+HiPo Work OAuth token. User API keys are not created, emailed, stored, or used
+by this provider.
 """
 
-import os
 import json
-import time
+import os
 import secrets
-import httpx
+import time
 from typing import Optional
 
-from fastmcp.server.auth import OAuthProvider, AccessToken
+import httpx
+from fastmcp.server.auth import AccessToken, OAuthProvider
 from mcp.server.auth.provider import (
-    AuthorizationCode, RefreshToken, OAuthToken,
-    AuthorizationParams, OAuthClientInformationFull,
-    AuthorizeError, TokenError,
+    AuthorizationCode,
+    AuthorizationParams,
+    AuthorizeError,
+    OAuthClientInformationFull,
+    OAuthToken,
+    RefreshToken,
+    TokenError,
 )
 
-# ── 配置 ──
 BACKEND_URL = os.environ.get("HIPO_BACKEND_URL", "http://127.0.0.1:8000")
 API_BASE = f"{BACKEND_URL}/api/v1"
+MCP_INTERNAL_SECRET = os.environ.get("MCP_INTERNAL_SECRET", "")
 
-# Token 有效期
-ACCESS_TOKEN_EXPIRY = 3600 * 24 * 30      # 30 天
-AUTH_CODE_EXPIRY = 300                     # 5 分钟
-REFRESH_TOKEN_EXPIRY = 3600 * 24 * 90     # 90 天
+ACCESS_TOKEN_EXPIRY = 15 * 60
+AUTH_CODE_EXPIRY = 5 * 60
+REFRESH_TOKEN_EXPIRY = 90 * 24 * 60 * 60
 
 
 class HiPoOAuthProvider(OAuthProvider):
-    """OAuth 授权提供者：对接 HiPo 邮箱验证码登录"""
+    """OAuth provider backed by HiPo Work's own user accounts."""
 
     def __init__(self, base_url: str, **kwargs):
         super().__init__(base_url=base_url, **kwargs)
-        # 内存存储
+        # Phase 1 keeps protocol state in memory. Phase 2 moves this state to
+        # Redis/PostgreSQL before horizontal scaling.
         self.clients: dict[str, OAuthClientInformationFull] = {}
         self.auth_codes: dict[str, AuthorizationCode] = {}
         self.access_tokens: dict[str, AccessToken] = {}
         self.refresh_tokens: dict[str, RefreshToken] = {}
         self._access_to_refresh: dict[str, str] = {}
         self._refresh_to_access: dict[str, str] = {}
-        # 预授权会话：state → {user_id, role, api_key}
         self._pending_auth: dict[str, dict] = {}
-        # P0: 用户 API Key 映射（user_id → api_key），不存 OAuth token 中
-        self._user_api_keys: dict[str, str] = {}
-        # 授权码对应的服务端凭证，避免把 API Key 放进 AuthorizationCode.subject
-        self._auth_code_api_keys: dict[str, str] = {}
 
-    def store_user_api_key(self, user_id: str, api_key: str):
-        """存储用户 API Key 到服务端内存（不暴露给 OAuth token）"""
-        self._user_api_keys[user_id] = api_key
-
-    def get_user_api_key(self, user_id: str) -> str:
-        """获取用户 API Key（顺带清理过期条目）"""
-        # 定期清理：如果映射表过大，清理掉没有有效 token 的条目
-        if len(self._user_api_keys) > 1000:
-            now = time.time()
-            valid_user_ids = set()
-            for at in self.access_tokens.values():
-                claims = getattr(at, "claims", {}) or {}
-                if at.expires_at > now:
-                    valid_user_ids.add(claims.get("user_id"))
-            self._user_api_keys = {u: k for u, k in self._user_api_keys.items() if u in valid_user_ids}
-        return self._user_api_keys.get(user_id, "")
-
-    def store_pending_auth(self, state: str, user_info: dict):
-        """存储 OAuth 流程中已验证的用户信息"""
+    def store_pending_auth(self, state: str, user_info: dict) -> None:
         user_info["_ts"] = time.time()
         self._pending_auth[state] = user_info
 
     def get_pending_auth(self, state: str) -> dict:
-        """取出并消费预授权信息（5 分钟 TTL）"""
         info = self._pending_auth.pop(state, {})
-        if info and info.get("_ts", 0) + 300 < time.time():
-            return {}  # P2: 超过 5 分钟过期
+        if info and info.get("_ts", 0) + AUTH_CODE_EXPIRY < time.time():
+            return {}
         return info
-
-    # ══════════════════════════════════════════
-    # 客户端注册
-    # ══════════════════════════════════════════
 
     async def get_client(self, client_id: str) -> Optional[OAuthClientInformationFull]:
         return self.clients.get(client_id)
@@ -90,214 +64,236 @@ class HiPoOAuthProvider(OAuthProvider):
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
         self.clients[client_info.client_id] = client_info
 
-    # ══════════════════════════════════════════
-    # 授权码生成
-    # ══════════════════════════════════════════
-
     async def authorize(self, client: OAuthClientInformationFull, params: AuthorizationParams) -> str:
-        """生成授权码并返回重定向 URI。从 _pending_auth 获取用户信息。"""
         from mcp.server.auth.handlers.authorize import construct_redirect_uri
 
         if client.client_id not in self.clients:
-            raise AuthorizeError("unauthorized_client", f"Client '{client.client_id}' not registered")
-
-        # 校验 redirect_uri 白名单（防止授权码劫持）
+            raise AuthorizeError("unauthorized_client", "Client is not registered")
         if client.redirect_uris and params.redirect_uri not in client.redirect_uris:
-            raise AuthorizeError(
-                "invalid_request",
-                f"redirect_uri '{params.redirect_uri}' 不在客户端注册的白名单中",
-            )
+            raise AuthorizeError("invalid_request", "redirect_uri is not registered")
 
-        # 通过 state 获取用户信息
         user_info = self.get_pending_auth(params.state or "")
         user_id = user_info.get("user_id", "")
-        role = user_info.get("role", "candidate")
-        api_key = user_info.get("api_key", "")
-        if not user_id:
-            raise AuthorizeError("access_denied", "User not authenticated")
+        role = user_info.get("role", "")
+        if not user_id or role not in ("candidate", "employer"):
+            raise AuthorizeError("access_denied", "User is not authenticated")
 
-        code_value = f"hipo_ac_{secrets.token_hex(24)}"
-        expires_at = time.time() + AUTH_CODE_EXPIRY
-
-        scopes_list = params.scopes or []
+        scopes = list(params.scopes or user_info.get("scopes") or ["profile"])
         if client.scope:
             allowed = set(client.scope.split())
-            scopes_list = [s for s in scopes_list if s in allowed]
+            scopes = [scope for scope in scopes if scope in allowed]
 
+        code_value = f"hipo_ac_{secrets.token_urlsafe(32)}"
         self.auth_codes[code_value] = AuthorizationCode(
             code=code_value,
             client_id=client.client_id,
             redirect_uri=params.redirect_uri,
             redirect_uri_provided_explicitly=params.redirect_uri_provided_explicitly,
-            scopes=scopes_list,
-            expires_at=expires_at,
+            scopes=scopes,
+            expires_at=time.time() + AUTH_CODE_EXPIRY,
             code_challenge=params.code_challenge,
             subject=json.dumps({"user_id": user_id, "role": role}),
         )
-        self._auth_code_api_keys[code_value] = api_key
+        return construct_redirect_uri(str(params.redirect_uri), code=code_value, state=params.state)
 
-        return construct_redirect_uri(
-            str(params.redirect_uri), code=code_value, state=params.state
-        )
-
-    # ══════════════════════════════════════════
-    # 授权码验证 + 换 token
-    # ══════════════════════════════════════════
-
-    async def load_authorization_code(self, client: OAuthClientInformationFull, code: str) -> Optional[AuthorizationCode]:
-        ac = self.auth_codes.get(code)
-        if not ac: return None
-        if ac.client_id != client.client_id: return None
-        if ac.expires_at < time.time():
+    async def load_authorization_code(
+        self, client: OAuthClientInformationFull, code: str
+    ) -> Optional[AuthorizationCode]:
+        auth_code = self.auth_codes.get(code)
+        if not auth_code or auth_code.client_id != client.client_id:
+            return None
+        if auth_code.expires_at < time.time():
             self.auth_codes.pop(code, None)
             return None
-        return ac
+        return auth_code
 
-    async def exchange_authorization_code(self, client: OAuthClientInformationFull, ac: AuthorizationCode) -> OAuthToken:
-        if ac.code not in self.auth_codes:
-            raise TokenError("invalid_grant", "Authorization code not found or already used")
-        self.auth_codes.pop(ac.code, None)
-        api_key = self._auth_code_api_keys.pop(ac.code, "")
+    async def _exchange_backend_identity(
+        self, user_id: str, client_id: str, role: str, scopes: list[str]
+    ) -> dict:
+        if not MCP_INTERNAL_SECRET:
+            raise TokenError("server_error", "MCP OAuth internal secret is not configured")
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    f"{API_BASE}/auth/oauth/exchange",
+                    headers={"X-MCP-Internal-Secret": MCP_INTERNAL_SECRET},
+                    json={
+                        "user_id": user_id,
+                        "client_id": client_id,
+                        "role": role,
+                        "scopes": scopes,
+                    },
+                )
+            if response.status_code != 200:
+                raise TokenError("server_error", "HiPo OAuth token exchange failed")
+            result = response.json()
+            if not result.get("access_token") or not result.get("refresh_token"):
+                raise TokenError("server_error", "HiPo OAuth token exchange returned no tokens")
+            return result
+        except TokenError:
+            raise
+        except Exception as exc:
+            raise TokenError("temporarily_unavailable", "HiPo OAuth backend is unavailable") from exc
 
-        subject = getattr(ac, "subject", None) or ""
-        try: user_meta = json.loads(subject) if subject else {}
-        except: user_meta = {}
-        user_id = user_meta.get("user_id", "unknown")
-        role = user_meta.get("role", "candidate")
+    async def _refresh_backend_token(self, refresh_token: str, client_id: str) -> dict:
+        if not MCP_INTERNAL_SECRET:
+            raise TokenError("server_error", "MCP OAuth internal secret is not configured")
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    f"{API_BASE}/auth/oauth/refresh",
+                    headers={"X-MCP-Internal-Secret": MCP_INTERNAL_SECRET},
+                    json={"refresh_token": refresh_token, "client_id": client_id},
+                )
+            if response.status_code != 200:
+                raise TokenError("invalid_grant", "HiPo OAuth refresh token is invalid")
+            result = response.json()
+            if not result.get("access_token") or not result.get("refresh_token"):
+                raise TokenError("server_error", "HiPo OAuth refresh returned no tokens")
+            return result
+        except TokenError:
+            raise
+        except Exception as exc:
+            raise TokenError("temporarily_unavailable", "HiPo OAuth backend is unavailable") from exc
 
-        access_token_value = f"hipo_at_{secrets.token_hex(32)}"
-        refresh_token_value = f"hipo_rt_{secrets.token_hex(32)}"
-        now = int(time.time())
+    @staticmethod
+    def _subject(auth_code: AuthorizationCode) -> tuple[str, str]:
+        try:
+            data = json.loads(getattr(auth_code, "subject", "") or "")
+        except (TypeError, ValueError):
+            data = {}
+        return str(data.get("user_id", "")), str(data.get("role", ""))
 
-        # P0: claims 不存 api_key，改为存到服务端内存映射
-        self._user_api_keys[user_id] = api_key
-        self.access_tokens[access_token_value] = AccessToken(
-            token=access_token_value, client_id=client.client_id,
-            scopes=ac.scopes, expires_at=now + ACCESS_TOKEN_EXPIRY,
+    def _store_token_pair(
+        self,
+        client_id: str,
+        scopes: list[str],
+        role: str,
+        user_id: str,
+        token_data: dict,
+    ) -> OAuthToken:
+        access_token = token_data["access_token"]
+        refresh_token = token_data["refresh_token"]
+        expires_in = int(token_data.get("expires_in", ACCESS_TOKEN_EXPIRY))
+        self.access_tokens[access_token] = AccessToken(
+            token=access_token,
+            client_id=client_id,
+            scopes=scopes,
+            expires_at=time.time() + expires_in,
             claims={"user_id": user_id, "role": role},
         )
-        self.refresh_tokens[refresh_token_value] = RefreshToken(
-            token=refresh_token_value, client_id=client.client_id,
-            scopes=ac.scopes, expires_at=now + REFRESH_TOKEN_EXPIRY,
+        self.refresh_tokens[refresh_token] = RefreshToken(
+            token=refresh_token,
+            client_id=client_id,
+            scopes=scopes,
+            expires_at=time.time() + REFRESH_TOKEN_EXPIRY,
         )
-        self._access_to_refresh[access_token_value] = refresh_token_value
-        self._refresh_to_access[refresh_token_value] = access_token_value
-
+        self._access_to_refresh[access_token] = refresh_token
+        self._refresh_to_access[refresh_token] = access_token
         return OAuthToken(
-            access_token=access_token_value, token_type="Bearer",
-            expires_in=ACCESS_TOKEN_EXPIRY, refresh_token=refresh_token_value,
-            scope=" ".join(ac.scopes),
+            access_token=access_token,
+            token_type="Bearer",
+            expires_in=expires_in,
+            refresh_token=refresh_token,
+            scope=" ".join(scopes),
         )
 
-    # ══════════════════════════════════════════
-    # Token 验证与刷新
-    # ══════════════════════════════════════════
+    async def exchange_authorization_code(
+        self, client: OAuthClientInformationFull, auth_code: AuthorizationCode
+    ) -> OAuthToken:
+        if auth_code.code not in self.auth_codes:
+            raise TokenError("invalid_grant", "Authorization code was already used")
+        self.auth_codes.pop(auth_code.code, None)
+        user_id, role = self._subject(auth_code)
+        if not user_id or role not in ("candidate", "employer"):
+            raise TokenError("invalid_grant", "Authorization code has invalid identity")
+        token_data = await self._exchange_backend_identity(
+            user_id, client.client_id, role, list(auth_code.scopes)
+        )
+        return self._store_token_pair(
+            client.client_id, list(auth_code.scopes), role, user_id, token_data
+        )
 
     async def verify_token(self, token: str) -> Optional[AccessToken]:
-        at = self.access_tokens.get(token)
-        if not at: return None
-        if at.expires_at is not None and at.expires_at < time.time():
+        access_token = self.access_tokens.get(token)
+        if not access_token:
+            return None
+        if access_token.expires_at is not None and access_token.expires_at < time.time():
             self._revoke_pair(access_token_str=token)
             return None
-        return at
+        return access_token
 
     async def load_access_token(self, token: str) -> Optional[AccessToken]:
         return await self.verify_token(token)
 
-    async def load_refresh_token(self, client: OAuthClientInformationFull, token: str) -> Optional[RefreshToken]:
-        rt = self.refresh_tokens.get(token)
-        if not rt: return None
-        if rt.client_id != client.client_id: return None
-        if rt.expires_at is not None and rt.expires_at < time.time():
+    async def load_refresh_token(
+        self, client: OAuthClientInformationFull, token: str
+    ) -> Optional[RefreshToken]:
+        refresh_token = self.refresh_tokens.get(token)
+        if not refresh_token or refresh_token.client_id != client.client_id:
+            return None
+        if refresh_token.expires_at is not None and refresh_token.expires_at < time.time():
             self._revoke_pair(refresh_token_str=token)
             return None
-        return rt
+        return refresh_token
 
-    async def exchange_refresh_token(self, client: OAuthClientInformationFull, rt: RefreshToken, scopes: list) -> OAuthToken:
-        original = set(rt.scopes)
-        requested = set(scopes)
-        if not requested.issubset(original):
+    async def exchange_refresh_token(
+        self, client: OAuthClientInformationFull, refresh_token: RefreshToken, scopes: list
+    ) -> OAuthToken:
+        original_scopes = set(refresh_token.scopes)
+        requested_scopes = set(scopes)
+        if not requested_scopes.issubset(original_scopes):
             raise TokenError("invalid_scope", "Requested scopes exceed authorized scopes")
 
-        # 先保存旧 access token 的身份，再吊销旧 token 对。
-        # _revoke_pair 会删除旧 access token，不能在之后再读取 claims。
-        old_access_token = self._refresh_to_access.get(rt.token)
-        old_at = self.access_tokens.get(old_access_token) if old_access_token else None
-        claims = dict(getattr(old_at, "claims", {}) or {})
-        self._revoke_pair(refresh_token_str=rt.token)
-
-        access_token_value = f"hipo_at_{secrets.token_hex(32)}"
-        refresh_token_value = f"hipo_rt_{secrets.token_hex(32)}"
-        now = int(time.time())
-
-        self.access_tokens[access_token_value] = AccessToken(
-            token=access_token_value, client_id=client.client_id,
-            scopes=scopes, expires_at=now + ACCESS_TOKEN_EXPIRY, claims=claims,
-        )
-        self.refresh_tokens[refresh_token_value] = RefreshToken(
-            token=refresh_token_value, client_id=client.client_id,
-            scopes=scopes, expires_at=now + REFRESH_TOKEN_EXPIRY,
-        )
-        self._access_to_refresh[access_token_value] = refresh_token_value
-        self._refresh_to_access[refresh_token_value] = access_token_value
-
-        return OAuthToken(
-            access_token=access_token_value, token_type="Bearer",
-            expires_in=ACCESS_TOKEN_EXPIRY, refresh_token=refresh_token_value,
-            scope=" ".join(scopes),
+        old_access_value = self._refresh_to_access.get(refresh_token.token)
+        old_access = self.access_tokens.get(old_access_value) if old_access_value else None
+        claims = dict(getattr(old_access, "claims", {}) or {})
+        role = str(claims.get("role", ""))
+        user_id = str(claims.get("user_id", ""))
+        token_data = await self._refresh_backend_token(refresh_token.token, client.client_id)
+        self._revoke_pair(refresh_token_str=refresh_token.token)
+        return self._store_token_pair(
+            client.client_id, list(scopes), role, user_id, token_data
         )
 
     def revoke_token(self, token) -> None:
-        """吊销 token（支持字符串或 AccessToken/RefreshToken 对象）"""
-        token_str = token.token if hasattr(token, "token") else str(token)
-        # 尝试作为 access token 吊销
-        if token_str in self.access_tokens:
-            self._revoke_pair(access_token_str=token_str)
-            return
-        # 尝试作为 refresh token 吊销
-        if token_str in self.refresh_tokens:
-            self._revoke_pair(refresh_token_str=token_str)
-            return
-
-    # ══════════════════════════════════════════
-    # 路由
-    # ══════════════════════════════════════════
+        token_value = token.token if hasattr(token, "token") else str(token)
+        if token_value in self.access_tokens:
+            self._revoke_pair(access_token_str=token_value)
+        elif token_value in self.refresh_tokens:
+            self._revoke_pair(refresh_token_str=token_value)
 
     def get_routes(self, mcp_path: str = None) -> list:
-        """返回 OAuth 标准元数据路由与 HiPo 自定义登录/吊销路由。"""
         from starlette.routing import Route
-        from .routes import authorize_route, token_route, login_page_route, revoke_route
+        from .routes import authorize_route, login_page_route, revoke_route, token_route
 
-        # 保留父类生成的 OAuth discovery / protected-resource metadata 路由。
         standard_routes = super().get_routes(mcp_path)
         routes = [
-            route for route in standard_routes
+            route
+            for route in standard_routes
             if getattr(route, "path", "") not in {"/authorize", "/token", "/revoke"}
         ]
-        # GET 展示登录页，POST 处理邮箱验证码并签发授权码。
-        routes.extend([
-            Route("/authorize", endpoint=login_page_route(self), methods=["GET"]),
-            Route("/authorize", endpoint=authorize_route(self), methods=["POST"]),
-            Route("/login", endpoint=login_page_route(self), methods=["GET", "POST"]),
-            Route("/token", endpoint=token_route(self), methods=["POST"]),
-            Route("/revoke", endpoint=revoke_route(self), methods=["POST"]),
-        ])
+        routes.extend(
+            [
+                Route("/authorize", endpoint=login_page_route(self), methods=["GET"]),
+                Route("/authorize", endpoint=authorize_route(self), methods=["POST"]),
+                Route("/login", endpoint=login_page_route(self), methods=["GET", "POST"]),
+                Route("/token", endpoint=token_route(self), methods=["POST"]),
+                Route("/revoke", endpoint=revoke_route(self), methods=["POST"]),
+            ]
+        )
         return routes
-
-    # ══════════════════════════════════════════
-    # 内部
-    # ══════════════════════════════════════════
 
     def _revoke_pair(self, access_token_str: str = None, refresh_token_str: str = None):
         if access_token_str:
-            rt = self._access_to_refresh.pop(access_token_str, None)
+            refresh_token = self._access_to_refresh.pop(access_token_str, None)
             self.access_tokens.pop(access_token_str, None)
-            if rt:
-                self.refresh_tokens.pop(rt, None)
-                self._refresh_to_access.pop(rt, None)
+            if refresh_token:
+                self.refresh_tokens.pop(refresh_token, None)
+                self._refresh_to_access.pop(refresh_token, None)
         if refresh_token_str:
-            at = self._refresh_to_access.pop(refresh_token_str, None)
+            access_token = self._refresh_to_access.pop(refresh_token_str, None)
             self.refresh_tokens.pop(refresh_token_str, None)
-            if at:
-                self.access_tokens.pop(at, None)
-                self._access_to_refresh.pop(at, None)
+            if access_token:
+                self.access_tokens.pop(access_token, None)
+                self._access_to_refresh.pop(access_token, None)

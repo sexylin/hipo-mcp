@@ -277,7 +277,6 @@ def authorize_route(provider):
                             error=msg,
                         )
                     user_data = resp.json()
-                    api_key = user_data.get("api_key_secret", "")
             except Exception as exc:
                 return _code_page(
                     **page_context,
@@ -285,14 +284,13 @@ def authorize_route(provider):
                     error=f"登录失败：{str(exc)[:80]}",
                 )
 
-            # 登录成功：state 中只暂存用户身份和服务端凭证映射所需信息。
-            from mcp.server.auth.provider import AuthorizationParams
-
+            # 只暂存已验证的用户身份；OAuth token 由 Backend 在兑换授权码时签发。
             provider.store_pending_auth(state, {
                 "user_id": user_data.get("user_id", ""),
                 "role": user_data.get("role", role),
-                "api_key": api_key,
+                "scopes": scope.split() if scope else ["profile"],
             })
+            from mcp.server.auth.provider import AuthorizationParams
             auth_params = AuthorizationParams(
                 redirect_uri=redirect_uri,
                 redirect_uri_provided_explicitly=True,

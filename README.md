@@ -78,33 +78,32 @@ https://mcp.hipowork.com/mcp
 
 ## 认证机制
 
-### OAuth 2.0（推荐）
+### OAuth 2.0（唯一推荐方式）
 
-- 完整的 OAuth 授权码流程（RFC 6749）
-- PKCE 支持
-- Access token 30 天 + Refresh token 90 天自动轮换
+HiPo Work 自己作为 OAuth Authorization Server：
+
+- 使用 Authorization Code + PKCE（S256）
+- 用户在 HiPo Work 授权页面完成邮箱验证码登录
+- 用户明确授权当前 MCP 客户端
+- 客户端自动获得 HiPo Work access token 和 refresh token
+- Access token 15 分钟有效，Refresh token 90 天，用于自动刷新
 - 支持 token 吊销（`POST /revoke`）
+- 用户不需要接收、复制或配置 API Key
 
-### API Key（备选）
+首次登录时的流程：
 
-客户端不支持 OAuth 时，可手动配置 `X-API-Key` header：
-
-```json
-{
-  "mcpServers": {
-    "hipo": {
-      "url": "https://mcp.hipowork.com/mcp",
-      "headers": {
-        "X-API-Key": "fb_live_xxx"
-      }
-    }
-  }
-}
+```text
+配置 MCP 地址
+→ 客户端打开 HiPo Work 授权页
+→ 输入邮箱和验证码
+→ 确认角色及客户端权限
+→ 自动返回 MCP 客户端
+→ 后续自动使用 OAuth Token
 ```
 
-1. 调用 `send_verification_code` 发送验证码
-2. 调用 `register_or_login` 注册（完整 API Key 只通过邮箱发送，MCP 响应只返回 Key 前缀）
-3. ⚠️ API Key 30 天有效，过期后重新调用 `register_or_login`
+### API Key
+
+当前新用户流程不再创建或发送 API Key。此前的 API Key 代码仅作为历史数据兼容保留，不属于当前 MCP 接入方式。
 
 ---
 
