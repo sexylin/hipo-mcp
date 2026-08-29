@@ -378,7 +378,20 @@ def authorize_route(provider):
                 code_challenge=code_challenge,
                 resource=resource or None,
             )
-            redirect_url = await provider.authorize(client, auth_params)
+            try:
+                redirect_url = await provider.authorize(client, auth_params)
+            except Exception as exc:
+                # AuthorizeError 不是 Starlette HTTPException，若不捕获会冒泡成 500。
+                # 统一转成 JSON 4xx，把授权失败原因还给用户而不是 Internal Server Error。
+                from mcp.server.auth.provider import AuthorizeError
+
+                if isinstance(exc, AuthorizeError):
+                    err_code, err_desc = exc.args if len(exc.args) == 2 else (str(exc), str(exc))
+                    return JSONResponse(
+                        {"error": err_code, "error_description": err_desc},
+                        status_code=400,
+                    )
+                raise
             return RedirectResponse(redirect_url, status_code=302)
 
         return JSONResponse({"error": "invalid_request"}, status_code=400)

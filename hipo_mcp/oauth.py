@@ -130,9 +130,13 @@ class HiPoOAuthProvider(OAuthProvider):
         if not user_id or role not in ("candidate", "employer"):
             raise AuthorizeError("access_denied", "User is not authenticated")
 
-        scopes = list(params.scopes or user_info.get("scopes") or ["profile"])
+        # 客户端可能注册了跨角色的全量 scope（例如同时支持 candidate/employer）。
+        # 这里按用户实际角色裁剪：只授予该角色允许的 scope，越权 scope 静默忽略
+        # （OAuth scope 降级语义）。裁剪后为空才拒绝。
+        requested_scopes = set(params.scopes or user_info.get("scopes") or ["profile"])
         allowed_role_scopes = ROLE_SCOPES[role]
-        if not set(scopes).issubset(allowed_role_scopes):
+        scopes = list(requested_scopes & allowed_role_scopes)
+        if not scopes:
             raise AuthorizeError("invalid_scope", "Requested scopes are not valid for this role")
         if client.scope and not set(scopes).issubset(set(client.scope.split())):
             raise AuthorizeError("invalid_scope", "Requested scope was not registered for this client")
