@@ -77,6 +77,19 @@ class HiPoOAuthProvider(OAuthProvider):
             return {}
         return info
 
+    def peek_pending_auth(self, state: str) -> dict:
+        """Non-destructive read of the pending auth record.
+
+        `get_pending_auth` pops the whole record (transaction + identity).  The
+        role-select step needs to read `user_id` before continuing the OAuth
+        flow, and the record must survive until `authorize()` consumes it.
+        """
+        info = self._pending_auth.get(state, {})
+        if not info or info.get("_ts", 0) + AUTH_CODE_EXPIRY < time.time():
+            self._pending_auth.pop(state, None)
+            return {}
+        return dict(info)
+
     def get_pending_transaction(self, state: str) -> dict:
         """Read the login transaction without consuming it."""
         info = self._pending_auth.get(state, {})

@@ -692,7 +692,10 @@ def authorize_route(provider):
             selected_role = form.get("role", "candidate")
             if selected_role not in ("candidate", "employer"):
                 selected_role = "candidate"
-            pending = provider.get_pending_auth(state)
+            # 非破坏性读取：pending 记录必须保留到 authorize() 消费，
+            # 否则 role_select 会把 transaction/user_id 提前 pop 掉，
+            # 导致最终 authorize 时 "Authorization transaction mismatch"。
+            pending = provider.peek_pending_auth(state)
             user_id = pending.get("user_id", "")
             if not user_id:
                 return JSONResponse(
