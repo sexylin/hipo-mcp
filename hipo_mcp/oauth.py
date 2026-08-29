@@ -13,7 +13,7 @@ from typing import Optional
 
 import httpx
 from fastmcp.server.auth import AccessToken, OAuthProvider
-from fastmcp.server.auth.settings import ClientRegistrationOptions, RevocationOptions
+from fastmcp.server.auth.auth import ClientRegistrationOptions, RevocationOptions
 from mcp.server.auth.provider import (
     AuthorizationCode,
     AuthorizationParams,
