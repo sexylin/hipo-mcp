@@ -199,7 +199,13 @@ def login_page_route(provider):
                 status_code=400,
             )
         try:
-            registered_redirect_uri = client.validate_redirect_uri(redirect_uri or None)
+            # redirect_uri 从 query 进来是 str；SDK 的 validate_redirect_uri 用
+            # AnyUrl 对象成员比较，str 与 AnyUrl 永远不相等（pydantic 已知坑），
+            # 因此必须显式转成 AnyUrl 再校验。
+            from pydantic import AnyUrl
+
+            _redirect_input = AnyUrl(redirect_uri) if redirect_uri else None
+            registered_redirect_uri = client.validate_redirect_uri(_redirect_input)
         except Exception as exc:
             return JSONResponse(
                 {"error": "invalid_request", "error_description": str(exc)},
