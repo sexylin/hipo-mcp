@@ -11,6 +11,7 @@ from starlette.responses import HTMLResponse, RedirectResponse, JSONResponse
 
 BACKEND_URL = os.environ.get("HIPO_BACKEND_URL", "http://127.0.0.1:8000")
 API_BASE = f"{BACKEND_URL}/api/v1"
+MCP_INTERNAL_SECRET = os.environ.get("MCP_INTERNAL_SECRET", "")
 
 # MCP 层限流桶：IP → [timestamp]
 _send_code_bucket: dict[str, list] = defaultdict(list)
@@ -69,13 +70,6 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
     <input type="hidden" name="code_challenge" value="{code_challenge}">
     <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
     <input type="hidden" name="step" value="send_code">
-    <div class="form-group">
-      <label>账号角色</label>
-      <select name="role" required>
-        <option value="candidate" {role_candidate_selected}>求职者（candidate）</option>
-        <option value="employer" {role_employer_selected}>招聘方（employer）</option>
-      </select>
-    </div>
     <div class="form-group">
       <label>邮箱</label>
       <input type="email" name="email" placeholder="you@example.com" value="{email}" required>
@@ -145,6 +139,76 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 </html>
 """
 
+ROLE_SELECT_PAGE_HTML = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HiPo Work 选择身份</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+       min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.card { background: #fff; border-radius: 16px; padding: 40px; width: 380px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.logo { text-align: center; margin-bottom: 24px; }
+.logo h1 { font-size: 24px; color: #333; }
+.logo p { color: #999; font-size: 14px; margin-top: 4px; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
+.form-group input { width: 100%; padding: 12px; border: 1px solid #ddd;
+                    border-radius: 8px; font-size: 15px; outline: none; }
+.form-group input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+.btn { width: 100%; padding: 13px; border: none; border-radius: 8px;
+       background: #667eea; color: #fff; font-size: 16px; cursor: pointer;
+       transition: background 0.3s; margin-top: 8px; }
+.btn:hover { background: #5a67d8; }
+.btn.alt { background: #f3f4f6; color: #333; }
+.btn.alt:hover { background: #e5e7eb; }
+.tip { font-size: 12px; color: #999; margin-top: 16px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1>HiPo Work</h1>
+    <p>首次使用，请选择你的身份</p>
+  </div>
+  <form method="POST" action="/authorize">
+    <input type="hidden" name="client_id" value="{client_id}">
+    <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+    <input type="hidden" name="response_type" value="code">
+    <input type="hidden" name="state" value="{state}">
+    <input type="hidden" name="scope" value="{scope}">
+    <input type="hidden" name="resource" value="{resource}">
+    <input type="hidden" name="code_challenge" value="{code_challenge}">
+    <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+    <input type="hidden" name="step" value="role_select">
+    <input type="hidden" name="email" value="{email}">
+    <input type="hidden" name="role" value="candidate">
+    <button type="submit" class="btn">我是求职者（Candidate）</button>
+  </form>
+  <form method="POST" action="/authorize">
+    <input type="hidden" name="client_id" value="{client_id}">
+    <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+    <input type="hidden" name="response_type" value="code">
+    <input type="hidden" name="state" value="{state}">
+    <input type="hidden" name="scope" value="{scope}">
+    <input type="hidden" name="resource" value="{resource}">
+    <input type="hidden" name="code_challenge" value="{code_challenge}">
+    <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+    <input type="hidden" name="step" value="role_select">
+    <input type="hidden" name="email" value="{email}">
+    <input type="hidden" name="role" value="employer">
+    <button type="submit" class="btn alt">我是招聘方（Employer）</button>
+  </form>
+  <div class="tip">身份选择后可在个人资料中修改。</div>
+</div>
+</body>
+</html>
+"""
+
 
 def _login_page(**kwargs) -> HTMLResponse:
     import html as _html
@@ -165,6 +229,43 @@ def _code_page(**kwargs) -> HTMLResponse:
         html = html.replace("{" + k + "}", str(_html.escape(str(v or ""))))
     html = re.sub(r"\{[a-z_]+\}", "", html)
     return HTMLResponse(html)
+
+
+def _role_select_page(**kwargs) -> HTMLResponse:
+    import html as _html
+    import re
+    html = ROLE_SELECT_PAGE_HTML
+    for k, v in kwargs.items():
+        html = html.replace("{" + k + "}", str(_html.escape(str(v or ""))))
+    html = re.sub(r"\{[a-z_]+\}", "", html)
+    return HTMLResponse(html)
+
+
+async def _finalize_authorize(provider, client, state, redirect_uri, scope, resource, code_challenge):
+    """构建 AuthorizationParams 并完成 OAuth 授权跳转。
+
+    AuthorizeError 不是 Starlette HTTPException，若不捕获会冒泡成 500，
+    统一转成 JSON 4xx 返回给浏览器。
+    """
+    from mcp.server.auth.provider import AuthorizationParams, AuthorizeError
+
+    auth_params = AuthorizationParams(
+        redirect_uri=redirect_uri,
+        redirect_uri_provided_explicitly=True,
+        scopes=scope.split() if scope else [],
+        state=state,
+        code_challenge=code_challenge,
+        resource=resource or None,
+    )
+    try:
+        redirect_url = await provider.authorize(client, auth_params)
+    except AuthorizeError as exc:
+        err_code, err_desc = exc.args if len(exc.args) == 2 else (str(exc), str(exc))
+        return JSONResponse(
+            {"error": err_code, "error_description": err_desc},
+            status_code=400,
+        )
+    return RedirectResponse(redirect_url, status_code=302)
 
 
 def login_page_route(provider):
@@ -234,8 +335,6 @@ def login_page_route(provider):
             code_challenge_method=code_challenge_method,
             email=email,
             role=role,
-            role_candidate_selected="selected" if role == "candidate" else "",
-            role_employer_selected="selected" if role == "employer" else "",
             message="",
             resource=params.get("resource", ""),
         )
@@ -309,8 +408,6 @@ def authorize_route(provider):
             "code_challenge_method": code_challenge_method,
             "email": email,
             "role": role,
-            "role_candidate_selected": "selected" if role == "candidate" else "",
-            "role_employer_selected": "selected" if role == "employer" else "",
         }
 
         if step == "send_code":
@@ -364,35 +461,88 @@ def authorize_route(provider):
                 )
 
             # 只暂存已验证的用户身份；OAuth token 由 Backend 在兑换授权码时签发。
+            user_id = user_data.get("user_id", "")
+            verified_role = user_data.get("role", role) or "candidate"
+            is_new_user = user_data.get("is_new_user", False)
             provider.store_pending_auth(state, {
-                "user_id": user_data.get("user_id", ""),
-                "role": user_data.get("role", role),
+                "user_id": user_id,
+                "role": verified_role,
                 "scopes": scope.split() if scope else ["profile"],
             })
-            from mcp.server.auth.provider import AuthorizationParams
-            auth_params = AuthorizationParams(
-                redirect_uri=redirect_uri,
-                redirect_uri_provided_explicitly=True,
-                scopes=scope.split() if scope else [],
-                state=state,
-                code_challenge=code_challenge,
-                resource=resource or None,
-            )
-            try:
-                redirect_url = await provider.authorize(client, auth_params)
-            except Exception as exc:
-                # AuthorizeError 不是 Starlette HTTPException，若不捕获会冒泡成 500。
-                # 统一转成 JSON 4xx，把授权失败原因还给用户而不是 Internal Server Error。
-                from mcp.server.auth.provider import AuthorizeError
 
-                if isinstance(exc, AuthorizeError):
-                    err_code, err_desc = exc.args if len(exc.args) == 2 else (str(exc), str(exc))
-                    return JSONResponse(
-                        {"error": err_code, "error_description": err_desc},
-                        status_code=400,
+            # 新用户：验证码通过后先选角色（求职者/招聘方），再继续授权。
+            if is_new_user:
+                return _role_select_page(
+                    client_id=client_id,
+                    redirect_uri=redirect_uri,
+                    response_type="code",
+                    state=state,
+                    scope=scope,
+                    resource=resource,
+                    code_challenge=code_challenge,
+                    code_challenge_method=code_challenge_method,
+                    email=email,
+                )
+
+            return await _finalize_authorize(
+                provider, client, state, redirect_uri, scope, resource, code_challenge
+            )
+
+        if step == "role_select":
+            # 新用户选定角色：用内部密钥调用后端更新角色，然后完成授权。
+            selected_role = form.get("role", "candidate")
+            if selected_role not in ("candidate", "employer"):
+                selected_role = "candidate"
+            pending = provider.get_pending_auth(state)
+            user_id = pending.get("user_id", "")
+            if not user_id:
+                return JSONResponse(
+                    {"error": "invalid_request", "error_description": "授权会话已过期，请重新开始"},
+                    status_code=400,
+                )
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as hc:
+                    resp = await hc.put(
+                        f"{API_BASE}/auth/me/role",
+                        json={"user_id": user_id, "role": selected_role},
+                        headers={"X-MCP-Internal-Secret": MCP_INTERNAL_SECRET},
                     )
-                raise
-            return RedirectResponse(redirect_url, status_code=302)
+                    if resp.status_code != 200:
+                        detail = resp.json().get("detail", {})
+                        msg = detail.get("message", "角色设置失败") if isinstance(detail, dict) else str(detail)
+                        return _role_select_page(
+                            client_id=client_id,
+                            redirect_uri=redirect_uri,
+                            response_type="code",
+                            state=state,
+                            scope=scope,
+                            resource=resource,
+                            code_challenge=code_challenge,
+                            code_challenge_method=code_challenge_method,
+                            email=email,
+                        )
+                    user_data = resp.json()
+            except Exception as exc:
+                return _role_select_page(
+                    client_id=client_id,
+                    redirect_uri=redirect_uri,
+                    response_type="code",
+                    state=state,
+                    scope=scope,
+                    resource=resource,
+                    code_challenge=code_challenge,
+                    code_challenge_method=code_challenge_method,
+                    email=email,
+                )
+
+            provider.store_pending_auth(state, {
+                "user_id": user_id,
+                "role": user_data.get("role", selected_role),
+                "scopes": scope.split() if scope else ["profile"],
+            })
+            return await _finalize_authorize(
+                provider, client, state, redirect_uri, scope, resource, code_challenge
+            )
 
         return JSONResponse({"error": "invalid_request"}, status_code=400)
 
