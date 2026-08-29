@@ -2,11 +2,9 @@
 
 import json
 import time
-import secrets
 import os
 import httpx
 from collections import defaultdict
-from urllib.parse import urlencode
 
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -64,8 +62,10 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   <form method="POST" action="/authorize">
     <input type="hidden" name="client_id" value="{client_id}">
     <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+    <input type="hidden" name="response_type" value="code">
     <input type="hidden" name="state" value="{state}">
     <input type="hidden" name="scope" value="{scope}">
+    <input type="hidden" name="resource" value="{resource}">
     <input type="hidden" name="code_challenge" value="{code_challenge}">
     <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
     <input type="hidden" name="step" value="send_code">
@@ -124,8 +124,10 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
   <form method="POST" action="/authorize">
     <input type="hidden" name="client_id" value="{client_id}">
     <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+    <input type="hidden" name="response_type" value="code">
     <input type="hidden" name="state" value="{state}">
     <input type="hidden" name="scope" value="{scope}">
+    <input type="hidden" name="resource" value="{resource}">
     <input type="hidden" name="code_challenge" value="{code_challenge}">
     <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
     <input type="hidden" name="step" value="verify">
@@ -137,7 +139,7 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
     </div>
     <button type="submit" class="btn">完成登录</button>
   </form>
-  <div class="tip">未收到？<a href="/authorize?client_id={client_id}&redirect_uri={redirect_uri_q}&state={state}">重新发送</a></div>
+  <div class="tip">未收到？请返回上一页重新发送验证码。</div>
 </div>
 </body>
 </html>
@@ -175,11 +177,47 @@ def login_page_route(provider):
         state = params.get("state", "")
         scope = params.get("scope", "")
         code_challenge = params.get("code_challenge", "")
-        code_challenge_method = params.get("code_challenge_method", "S256")
+        code_challenge_method = params.get("code_challenge_method", "")
         email = params.get("email", "")
         role = params.get("role", "candidate")
         if role not in ("candidate", "employer"):
             role = "candidate"
+
+        client = await provider.get_client(client_id) if client_id else None
+        if (
+            not client
+            or not state
+            or params.get("response_type") != "code"
+            or not code_challenge
+            or code_challenge_method != "S256"
+        ):
+            return JSONResponse(
+                {
+                    "error": "invalid_request",
+                    "error_description": "Authorization Code with PKCE S256 is required",
+                },
+                status_code=400,
+            )
+        try:
+            registered_redirect_uri = client.validate_redirect_uri(redirect_uri or None)
+        except Exception as exc:
+            return JSONResponse(
+                {"error": "invalid_request", "error_description": str(exc)},
+                status_code=400,
+            )
+        redirect_uri = str(registered_redirect_uri)
+        provider.store_pending_transaction(
+            state,
+            {
+                "client_id": client_id,
+                "redirect_uri": redirect_uri,
+                "state": state,
+                "scope": scope,
+                "code_challenge": code_challenge,
+                "code_challenge_method": code_challenge_method,
+                "resource": params.get("resource", ""),
+            },
+        )
 
         return _login_page(
             client_id=client_id,
@@ -193,6 +231,7 @@ def login_page_route(provider):
             role_candidate_selected="selected" if role == "candidate" else "",
             role_employer_selected="selected" if role == "employer" else "",
             message="",
+            resource=params.get("resource", ""),
         )
 
     return handler
@@ -207,8 +246,10 @@ def authorize_route(provider):
         state = form.get("state", "")
         scope = form.get("scope", "")
         code_challenge = form.get("code_challenge", "")
-        code_challenge_method = form.get("code_challenge_method", "S256")
+        code_challenge_method = form.get("code_challenge_method", "")
         step = form.get("step", "send_code")
+        resource = form.get("resource", "")
+        response_type = form.get("response_type", "")
         email = form.get("email", "")
         role = form.get("role", "candidate")
         if role not in ("candidate", "employer"):
@@ -221,11 +262,43 @@ def authorize_route(provider):
                 status_code=400,
             )
 
-        page_context = {
+        if response_type != "code" or not state or not code_challenge or code_challenge_method != "S256":
+            return JSONResponse(
+                {
+                    "error": "invalid_request",
+                    "error_description": "Authorization Code with PKCE S256 is required",
+                },
+                status_code=400,
+            )
+
+        transaction = provider.get_pending_transaction(state)
+        expected_transaction = {
             "client_id": client_id,
             "redirect_uri": redirect_uri,
             "state": state,
             "scope": scope,
+            "code_challenge": code_challenge,
+            "code_challenge_method": code_challenge_method,
+            "resource": resource,
+        }
+        if not state or any(
+            transaction.get(key) != value for key, value in expected_transaction.items()
+        ):
+            return JSONResponse(
+                {
+                    "error": "invalid_request",
+                    "error_description": "Authorization transaction mismatch",
+                },
+                status_code=400,
+            )
+
+        page_context = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "state": state,
+            "scope": scope,
+            "resource": resource,
             "code_challenge": code_challenge,
             "code_challenge_method": code_challenge_method,
             "email": email,
@@ -297,73 +370,11 @@ def authorize_route(provider):
                 scopes=scope.split() if scope else [],
                 state=state,
                 code_challenge=code_challenge,
-                code_challenge_method=code_challenge_method if code_challenge_method else None,
+                resource=resource or None,
             )
             redirect_url = await provider.authorize(client, auth_params)
             return RedirectResponse(redirect_url, status_code=302)
 
         return JSONResponse({"error": "invalid_request"}, status_code=400)
-
-    return handler
-
-
-def token_route(provider):
-    """POST /token → 换 token"""
-    async def handler(request: Request):
-        form = await request.form()
-        grant_type = form.get("grant_type")
-        code = form.get("code")
-        redirect_uri = form.get("redirect_uri")
-        client_id = form.get("client_id")
-        code_verifier = form.get("code_verifier")
-        refresh_token = form.get("refresh_token")
-
-        client = await provider.get_client(client_id) if client_id else None
-
-        if grant_type == "authorization_code":
-            if not code or not client:
-                return JSONResponse({"error": "invalid_grant"}, status_code=400)
-            ac = await provider.load_authorization_code(client, code)
-            if not ac:
-                return JSONResponse({"error": "invalid_grant", "error_description": "Invalid or expired code"}, status_code=400)
-            # 授权码只能在原始 redirect_uri 上兑换，防止 code 被转发到其他回调地址。
-            if not redirect_uri or str(ac.redirect_uri) != str(redirect_uri):
-                return JSONResponse({"error": "invalid_grant", "error_description": "redirect_uri mismatch"}, status_code=400)
-            # PKCE：存在 code_challenge 时必须提供并严格校验 code_verifier。
-            if ac.code_challenge:
-                if not code_verifier:
-                    return JSONResponse({"error": "invalid_grant", "error_description": "Missing code_verifier"}, status_code=400)
-                import hashlib, base64, hmac
-                digest = hashlib.sha256(code_verifier.encode()).digest()
-                verifier_b64 = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
-                if not hmac.compare_digest(verifier_b64, ac.code_challenge):
-                    return JSONResponse({"error": "invalid_grant", "error_description": "PKCE verification failed"}, status_code=400)
-            token = await provider.exchange_authorization_code(client, ac)
-            return JSONResponse(token.model_dump(exclude_none=True))
-
-        elif grant_type == "refresh_token":
-            if not refresh_token or not client:
-                return JSONResponse({"error": "invalid_grant"}, status_code=400)
-            rt = await provider.load_refresh_token(client, refresh_token)
-            if not rt:
-                return JSONResponse({"error": "invalid_grant", "error_description": "Invalid or expired refresh token"}, status_code=400)
-            scopes = (form.get("scope") or " ".join(rt.scopes)).split()
-            token = await provider.exchange_refresh_token(client, rt, scopes)
-            return JSONResponse(token.model_dump(exclude_none=True))
-
-        return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
-
-    return handler
-
-
-def revoke_route(provider):
-    """POST /revoke → 吊销 token"""
-    async def handler(request: Request):
-        form = await request.form()
-        token = form.get("token")
-        if not token:
-            return JSONResponse({"error": "invalid_request", "error_description": "Missing token"}, status_code=400)
-        provider.revoke_token(token)
-        return JSONResponse({"ok": True})
 
     return handler

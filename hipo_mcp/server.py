@@ -17,7 +17,7 @@ BACKEND_URL = os.environ.get("HIPO_BACKEND_URL", "http://127.0.0.1:8000")
 API_BASE = f"{BACKEND_URL}/api/v1"
 
 # ── OAuth Provider ──
-from .oauth import HiPoOAuthProvider
+from .oauth import HiPoOAuthProvider, ROLE_SCOPES
 from fastmcp.server.auth.auth import ClientRegistrationOptions, RevocationOptions
 
 MCP_BASE_URL = os.environ.get("HIPO_MCP_BASE_URL", "http://127.0.0.1:8003")
@@ -73,13 +73,19 @@ def _oauth_access_token_value() -> str:
         return ""
 
 
-def _require_role(ctx: Context, role: str):
-    """检查角色权限，返回 None 或错误信息"""
+def _require_role(ctx: Context, role: str, operation: str = "read"):
+    """检查数据库角色和对应的 OAuth scope。"""
     u = _user(ctx)
     if not u:
         return "未认证：请先通过 OAuth 登录"
     if u.get("role") != role:
         return f"权限不足：需要 {role} 角色，当前是 {u.get('role')}"
+    if operation not in {"read", "write"}:
+        return "OAuth 操作类型无效"
+    scopes = set(str(u.get("scope") or "").split())
+    required_scope = f"{role}:{operation}"
+    if required_scope not in scopes or not scopes.issubset(ROLE_SCOPES[role]):
+        return f"权限不足：缺少 OAuth scope {required_scope}"
     return None
 
 
@@ -216,8 +222,7 @@ def publish_job(
     salary_max: int = None,
     salary_unit: str = "monthly",
 ) -> str:
-    """发布岗位"""
-    err = _require_role(ctx, "employer")
+    err = _require_role(ctx, "employer", "write")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
     result = _post(ctx, "/agent/publish-job", {
         "title": title, "raw_text": raw_text or "",
@@ -233,7 +238,7 @@ def publish_job(
 )
 def match_candidates(ctx: Context, required: list, preferred: dict = None, max_results: int = 10) -> str:
     """匹配候选人"""
-    err = _require_role(ctx, "employer")
+    err = _require_role(ctx, "employer", "read")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
     result = _post(ctx, "/agent/match-candidates", {"required": required, "preferred": _normalize_preferred(preferred or {}), "max_results": max_results})
     return json.dumps(result, ensure_ascii=False, default=str)
@@ -245,7 +250,7 @@ def match_candidates(ctx: Context, required: list, preferred: dict = None, max_r
 )
 def match_job_requirement(ctx: Context, job_id: str, max_results: int = 10) -> str:
     """根据岗位 ID 自动匹配"""
-    err = _require_role(ctx, "employer")
+    err = _require_role(ctx, "employer", "read")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
     result = _post(ctx, f"/employer/requirements/{job_id}/match", {"max_results": max_results})
     return json.dumps(result, ensure_ascii=False, default=str)
@@ -257,7 +262,7 @@ def match_job_requirement(ctx: Context, job_id: str, max_results: int = 10) -> s
 )
 def search_candidates(ctx: Context, query: str, max_results: int = 10) -> str:
     """自然语言搜索"""
-    err = _require_role(ctx, "employer")
+    err = _require_role(ctx, "employer", "read")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
     result = _post(ctx, "/search", {"query": query, "max_results": max_results})
     return json.dumps(result, ensure_ascii=False, default=str)
@@ -269,7 +274,7 @@ def search_candidates(ctx: Context, query: str, max_results: int = 10) -> str:
 )
 def get_stats(ctx: Context) -> str:
     """平台统计"""
-    err = _require_role(ctx, "employer")
+    err = _require_role(ctx, "employer", "read")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
     result = _get(ctx, "/agent/stats")
     return json.dumps(result, ensure_ascii=False)
@@ -281,7 +286,7 @@ def get_stats(ctx: Context) -> str:
 )
 def market_analysis(ctx: Context, keyword: str = None, industry: str = None, location: str = None) -> str:
     """市场分析"""
-    err = _require_role(ctx, "employer")
+    err = _require_role(ctx, "employer", "read")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
     body = {}
     if keyword: body["keyword"] = keyword
