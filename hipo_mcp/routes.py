@@ -26,56 +26,113 @@ LOGIN_PAGE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiPo Work 授权登录</title>
+<title>HiPo Work · 授权登录</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-       min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-.card { background: #fff; border-radius: 16px; padding: 40px; width: 380px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-.logo { text-align: center; margin-bottom: 24px; }
-.logo h1 { font-size: 24px; color: #333; }
-.logo p { color: #999; font-size: 14px; margin-top: 4px; }
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
-.form-group input { width: 100%; padding: 12px; border: 1px solid #ddd;
-                    border-radius: 8px; font-size: 15px; outline: none; }
-.form-group input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
-.btn { width: 100%; padding: 13px; border: none; border-radius: 8px;
-       background: #667eea; color: #fff; font-size: 16px; cursor: pointer;
-       transition: background 0.3s; }
-.btn:hover { background: #5a67d8; }
-.error { background: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 8px;
-         font-size: 13px; margin-bottom: 16px; }
-.success { background: #d1fae5; color: #065f46; padding: 10px; border-radius: 8px;
-           font-size: 13px; margin-bottom: 16px; }
-.tip { font-size: 12px; color: #999; margin-top: 16px; text-align: center; }
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
+  --bg:#0b0d17; --card:rgba(20,22,38,.86);
+  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.2);
+  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center;
+  color:var(--text); overflow:hidden; position:relative;
+}
+body::before{ content:""; position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
+  mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
+.wrap{ position:relative; z-index:1; width:100%; max-width:404px; padding:24px; }
+.card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:40px 36px 34px;
+  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
+.brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
+.logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center; }
+.logo svg{ width:24px; height:24px; }
+.brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
+.brand p{ font-size:13px; color:var(--dim); margin-top:2px; }
+.head{ margin-bottom:26px; }
+.head h2{ font-size:22px; font-weight:700; letter-spacing:.2px; }
+.head p{ font-size:13.5px; color:var(--dim); margin-top:8px; line-height:1.6; }
+.field{ position:relative; margin-bottom:20px; }
+.field label{ display:block; font-size:13px; font-weight:600; color:var(--dim); margin-bottom:8px; letter-spacing:.2px; }
+.field .in-wrap{ position:relative; }
+.field svg.lead{ position:absolute; left:14px; top:50%; transform:translateY(-50%);
+  width:18px; height:18px; color:var(--dim); pointer-events:none; }
+.field input{ width:100%; padding:13px 14px 13px 42px; border:1px solid var(--border);
+  border-radius:12px; font-size:15px; color:var(--text); outline:none;
+  background:rgba(255,255,255,.045); transition:border-color .2s, box-shadow .2s, background .2s; }
+.field input::placeholder{ color:rgba(154,161,184,.55); }
+.field input:focus{ border-color:var(--brand); background:rgba(255,255,255,.06);
+  box-shadow:0 0 0 4px rgba(99,102,241,.22); }
+.btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
+  font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 10px 30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  transition:transform .15s, box-shadow .2s, filter .2s; }
+.btn:hover{ transform:translateY(-1px); filter:brightness(1.06);
+  box-shadow:0 14px 36px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+.btn:active{ transform:translateY(0); }
+.msg{ font-size:13px; border-radius:12px; padding:11px 14px; margin-bottom:18px; line-height:1.5; }
+.msg.err{ background:rgba(244,63,94,.12); color:#fda4af; border:1px solid rgba(244,63,94,.25); }
+.msg.ok{ background:rgba(16,185,129,.12); color:#6ee7b7; border:1px solid rgba(16,185,129,.25); }
+.foot{ display:flex; align-items:center; justify-content:center; gap:7px;
+  margin-top:24px; font-size:12px; color:var(--dim); }
+.foot svg{ width:13px; height:13px; }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">
-    <h1>HiPo Work</h1>
-    <p>授权连接到 HiPo Work MCP 服务</p>
-  </div>
-  {message}
-  <form method="POST" action="/authorize">
-    <input type="hidden" name="client_id" value="{client_id}">
-    <input type="hidden" name="redirect_uri" value="{redirect_uri}">
-    <input type="hidden" name="response_type" value="code">
-    <input type="hidden" name="state" value="{state}">
-    <input type="hidden" name="scope" value="{scope}">
-    <input type="hidden" name="resource" value="{resource}">
-    <input type="hidden" name="code_challenge" value="{code_challenge}">
-    <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
-    <input type="hidden" name="step" value="send_code">
-    <div class="form-group">
-      <label>邮箱</label>
-      <input type="email" name="email" placeholder="you@example.com" value="{email}" required>
+<div class="wrap">
+  <div class="card">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      </div>
+      <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
     </div>
-    <button type="submit" class="btn">获取验证码</button>
-  </form>
+    <div class="head">
+      <h2>授权连接你的 AI 助手</h2>
+      <p>通过邮箱验证码登录，安全连接 MCP 服务，让你的 Agent 替你处理招聘与求职。</p>
+    </div>
+    {message}
+    <form method="POST" action="/authorize">
+      <input type="hidden" name="client_id" value="{client_id}">
+      <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="state" value="{state}">
+      <input type="hidden" name="scope" value="{scope}">
+      <input type="hidden" name="resource" value="{resource}">
+      <input type="hidden" name="code_challenge" value="{code_challenge}">
+      <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+      <input type="hidden" name="step" value="send_code">
+      <div class="field">
+        <label for="email">邮箱地址</label>
+        <div class="in-wrap">
+          <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M2 7l10 6 10-6"/></svg>
+          <input id="email" type="email" name="email" placeholder="you@example.com" value="{email}" autocomplete="email" required>
+        </div>
+      </div>
+      <button type="submit" class="btn">获取验证码</button>
+    </form>
+    <div class="foot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      通过邮箱验证码安全连接
+    </div>
+  </div>
 </div>
 </body>
 </html>
@@ -86,54 +143,114 @@ CODE_PAGE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiPo Work 授权登录</title>
+<title>HiPo Work · 输入验证码</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-       min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-.card { background: #fff; border-radius: 16px; padding: 40px; width: 380px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-.logo { text-align: center; margin-bottom: 24px; }
-.logo h1 { font-size: 24px; color: #333; }
-.logo p { color: #999; font-size: 14px; margin-top: 4px; }
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
-.form-group input { width: 100%; padding: 12px; border: 1px solid #ddd;
-                    border-radius: 8px; font-size: 15px; outline: none; }
-.form-group input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
-.btn { width: 100%; padding: 13px; border: none; border-radius: 8px;
-       background: #667eea; color: #fff; font-size: 16px; cursor: pointer;
-       transition: background 0.3s; }
-.btn:hover { background: #5a67d8; }
-.tip { font-size: 12px; color: #999; margin-top: 16px; text-align: center; }
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
+  --bg:#0b0d17; --card:rgba(20,22,38,.86);
+  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.2);
+  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center;
+  color:var(--text); overflow:hidden; position:relative;
+}
+body::before{ content:""; position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
+  mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
+.wrap{ position:relative; z-index:1; width:100%; max-width:404px; padding:24px; }
+.card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:40px 36px 34px;
+  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
+.brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
+.logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center; }
+.logo svg{ width:24px; height:24px; }
+.brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
+.brand p{ font-size:13px; color:var(--dim); margin-top:2px; }
+.head{ margin-bottom:26px; }
+.head h2{ font-size:22px; font-weight:700; letter-spacing:.2px; }
+.head .sent{ display:flex; align-items:center; gap:8px; margin-top:10px;
+  font-size:13.5px; color:var(--dim); line-height:1.6; }
+.head .sent svg{ width:16px; height:16px; flex:none; color:#6ee7b7; }
+.head .sent b{ color:var(--text); font-weight:600; word-break:break-all; }
+.otp{ position:relative; margin-bottom:22px; text-align:center; }
+.otp input{ width:100%; padding:16px; border:1px solid var(--border);
+  border-radius:14px; font-size:30px; font-weight:700; letter-spacing:16px; text-indent:16px;
+  text-align:center; color:var(--text); outline:none;
+  background:rgba(255,255,255,.05);
+  transition:border-color .2s, box-shadow .2s, background .2s; font-variant-numeric:tabular-nums; }
+.otp input::placeholder{ color:rgba(154,161,184,.3); font-weight:400; letter-spacing:14px; text-indent:14px; }
+.otp input:focus{ border-color:var(--brand); background:rgba(255,255,255,.07);
+  box-shadow:0 0 0 4px rgba(99,102,241,.22); }
+.btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
+  font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 10px 30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  transition:transform .15s, box-shadow .2s, filter .2s; }
+.btn:hover{ transform:translateY(-1px); filter:brightness(1.06);
+  box-shadow:0 14px 36px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+.btn:active{ transform:translateY(0); }
+.msg{ font-size:13px; border-radius:12px; padding:11px 14px; margin-bottom:18px; line-height:1.5; }
+.msg.err{ background:rgba(244,63,94,.12); color:#fda4af; border:1px solid rgba(244,63,94,.25); }
+.msg.ok{ background:rgba(16,185,129,.12); color:#6ee7b7; border:1px solid rgba(16,185,129,.25); }
+.back{ display:flex; align-items:center; justify-content:center; gap:6px;
+  margin-top:22px; font-size:13px; color:var(--dim); }
+.back a{ color:var(--brand); text-decoration:none; font-weight:600;
+  transition:color .2s; }
+.back a:hover{ color:var(--brand2); text-decoration:underline; }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">
-    <h1>HiPo Work</h1>
-    <p>验证码已发送至 {email}</p>
-  </div>
-  <form method="POST" action="/authorize">
-    <input type="hidden" name="client_id" value="{client_id}">
-    <input type="hidden" name="redirect_uri" value="{redirect_uri}">
-    <input type="hidden" name="response_type" value="code">
-    <input type="hidden" name="state" value="{state}">
-    <input type="hidden" name="scope" value="{scope}">
-    <input type="hidden" name="resource" value="{resource}">
-    <input type="hidden" name="code_challenge" value="{code_challenge}">
-    <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
-    <input type="hidden" name="step" value="verify">
-    <input type="hidden" name="email" value="{email}">
-    <input type="hidden" name="role" value="{role}">
-    <div class="form-group">
-      <label>输入验证码</label>
-      <input type="text" name="code" placeholder="6 位验证码" maxlength="6" required>
+<div class="wrap">
+  <div class="card">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      </div>
+      <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
     </div>
-    <button type="submit" class="btn">完成登录</button>
-  </form>
-  <div class="tip">未收到？请返回上一页重新发送验证码。</div>
+    <div class="head">
+      <h2>输入验证码</h2>
+      <div class="sent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        <span>验证码已发送至 <b>{email}</b></span>
+      </div>
+    </div>
+    {message}
+    <form method="POST" action="/authorize">
+      <input type="hidden" name="client_id" value="{client_id}">
+      <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="state" value="{state}">
+      <input type="hidden" name="scope" value="{scope}">
+      <input type="hidden" name="resource" value="{resource}">
+      <input type="hidden" name="code_challenge" value="{code_challenge}">
+      <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+      <input type="hidden" name="step" value="verify">
+      <input type="hidden" name="email" value="{email}">
+      <input type="hidden" name="role" value="{role}">
+      <div class="otp">
+        <input type="text" name="code" placeholder="······" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autofocus required>
+      </div>
+      <button type="submit" class="btn">完成登录</button>
+    </form>
+    <div class="back">未收到？<a href="javascript:history.back()">返回重新获取</a></div>
+  </div>
 </div>
 </body>
 </html>
@@ -144,66 +261,131 @@ ROLE_SELECT_PAGE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiPo Work 选择身份</title>
+<title>HiPo Work · 选择身份</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-       min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-.card { background: #fff; border-radius: 16px; padding: 40px; width: 380px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-.logo { text-align: center; margin-bottom: 24px; }
-.logo h1 { font-size: 24px; color: #333; }
-.logo p { color: #999; font-size: 14px; margin-top: 4px; }
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
-.form-group input { width: 100%; padding: 12px; border: 1px solid #ddd;
-                    border-radius: 8px; font-size: 15px; outline: none; }
-.form-group input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
-.btn { width: 100%; padding: 13px; border: none; border-radius: 8px;
-       background: #667eea; color: #fff; font-size: 16px; cursor: pointer;
-       transition: background 0.3s; margin-top: 8px; }
-.btn:hover { background: #5a67d8; }
-.btn.alt { background: #f3f4f6; color: #333; }
-.btn.alt:hover { background: #e5e7eb; }
-.tip { font-size: 12px; color: #999; margin-top: 16px; text-align: center; }
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
+  --bg:#0b0d17; --card:rgba(20,22,38,.86);
+  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.22);
+  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center;
+  color:var(--text); overflow:hidden; position:relative;
+}
+body::before{ content:""; position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
+  mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
+.wrap{ position:relative; z-index:1; width:100%; max-width:440px; padding:24px; }
+.card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:38px 32px 30px;
+  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
+.brand{ display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+.logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center; }
+.logo svg{ width:24px; height:24px; }
+.brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
+.brand p{ font-size:13px; color:var(--dim); margin-top:2px; }
+.head{ margin-bottom:24px; }
+.head h2{ font-size:22px; font-weight:700; letter-spacing:.2px; }
+.head p{ font-size:13.5px; color:var(--dim); margin-top:8px; line-height:1.6; }
+.role{ display:block; width:100%; text-align:left; cursor:pointer;
+  background:rgba(255,255,255,.045); border:1px solid var(--border);
+  border-radius:16px; padding:20px 18px; margin-bottom:14px; color:var(--text);
+  transition:border-color .2s, background .2s, transform .15s, box-shadow .2s; }
+.role:hover{ border-color:var(--brand); background:rgba(99,102,241,.09);
+  transform:translateY(-2px); box-shadow:0 12px 32px rgba(99,102,241,.18); }
+.role:active{ transform:translateY(0); }
+.role .row{ display:flex; align-items:center; gap:14px; }
+.role .ico{ width:46px; height:46px; border-radius:13px; flex:none;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(99,102,241,.16); color:#a5b4fc; }
+.role.alt .ico{ background:rgba(34,211,238,.12); color:#67e8f9; }
+.role .ico svg{ width:24px; height:24px; }
+.role .txt{ flex:1; min-width:0; }
+.role .tt{ font-size:16px; font-weight:700; letter-spacing:.2px; }
+.role .ds{ font-size:12.5px; color:var(--dim); margin-top:4px; line-height:1.5; }
+.role .ar{ flex:none; color:var(--dim); transition:transform .2s, color .2s; }
+.role:hover .ar{ color:var(--brand); transform:translateX(3px); }
+.role .ar svg{ width:18px; height:18px; }
+.foot{ text-align:center; font-size:12px; color:var(--dim); margin-top:22px; }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">
-    <h1>HiPo Work</h1>
-    <p>首次使用，请选择你的身份</p>
+<div class="wrap">
+  <div class="card">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      </div>
+      <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
+    </div>
+    <div class="head">
+      <h2>选择你的身份</h2>
+      <p>首次使用，请选择你的身份。不同身份将获得对应的 AI 能力与权限。</p>
+    </div>
+    <form method="POST" action="/authorize">
+      <input type="hidden" name="client_id" value="{client_id}">
+      <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="state" value="{state}">
+      <input type="hidden" name="scope" value="{scope}">
+      <input type="hidden" name="resource" value="{resource}">
+      <input type="hidden" name="code_challenge" value="{code_challenge}">
+      <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+      <input type="hidden" name="step" value="role_select">
+      <input type="hidden" name="email" value="{email}">
+      <input type="hidden" name="role" value="candidate">
+      <button type="submit" class="role">
+        <div class="row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+          <div class="txt">
+            <div class="tt">我是求职者</div>
+            <div class="ds">由 AI 帮你导入简历、管理求职档案</div>
+          </div>
+          <div class="ar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+        </div>
+      </button>
+    </form>
+    <form method="POST" action="/authorize">
+      <input type="hidden" name="client_id" value="{client_id}">
+      <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="state" value="{state}">
+      <input type="hidden" name="scope" value="{scope}">
+      <input type="hidden" name="resource" value="{resource}">
+      <input type="hidden" name="code_challenge" value="{code_challenge}">
+      <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+      <input type="hidden" name="step" value="role_select">
+      <input type="hidden" name="email" value="{email}">
+      <input type="hidden" name="role" value="employer">
+      <button type="submit" class="role alt">
+        <div class="row">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6"/><path d="M3 7h18a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z"/><path d="M12 7v3M8 4h8v3H8z"/></svg></div>
+          <div class="txt">
+            <div class="tt">我是招聘方</div>
+            <div class="ds">由 AI 帮你发布岗位、匹配候选人</div>
+          </div>
+          <div class="ar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+        </div>
+      </button>
+    </form>
+    <div class="foot">身份选择后可在个人资料中修改</div>
   </div>
-  <form method="POST" action="/authorize">
-    <input type="hidden" name="client_id" value="{client_id}">
-    <input type="hidden" name="redirect_uri" value="{redirect_uri}">
-    <input type="hidden" name="response_type" value="code">
-    <input type="hidden" name="state" value="{state}">
-    <input type="hidden" name="scope" value="{scope}">
-    <input type="hidden" name="resource" value="{resource}">
-    <input type="hidden" name="code_challenge" value="{code_challenge}">
-    <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
-    <input type="hidden" name="step" value="role_select">
-    <input type="hidden" name="email" value="{email}">
-    <input type="hidden" name="role" value="candidate">
-    <button type="submit" class="btn">我是求职者（Candidate）</button>
-  </form>
-  <form method="POST" action="/authorize">
-    <input type="hidden" name="client_id" value="{client_id}">
-    <input type="hidden" name="redirect_uri" value="{redirect_uri}">
-    <input type="hidden" name="response_type" value="code">
-    <input type="hidden" name="state" value="{state}">
-    <input type="hidden" name="scope" value="{scope}">
-    <input type="hidden" name="resource" value="{resource}">
-    <input type="hidden" name="code_challenge" value="{code_challenge}">
-    <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
-    <input type="hidden" name="step" value="role_select">
-    <input type="hidden" name="email" value="{email}">
-    <input type="hidden" name="role" value="employer">
-    <button type="submit" class="btn alt">我是招聘方（Employer）</button>
-  </form>
-  <div class="tip">身份选择后可在个人资料中修改。</div>
 </div>
 </body>
 </html>
@@ -211,34 +393,51 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 
 
 def _login_page(**kwargs) -> HTMLResponse:
-    import html as _html
-    html = LOGIN_PAGE_HTML
-    for k, v in kwargs.items():
-        html = html.replace("{" + k + "}", str(_html.escape(str(v or ""))))
-    # 清理剩余未替换的占位符
-    import re
-    html = re.sub(r"\{[a-z_]+\}", "", html)
-    return HTMLResponse(html)
+    return _render_page(LOGIN_PAGE_HTML, kwargs)
 
 
 def _code_page(**kwargs) -> HTMLResponse:
-    import html as _html
-    import re
-    html = CODE_PAGE_HTML
-    for k, v in kwargs.items():
-        html = html.replace("{" + k + "}", str(_html.escape(str(v or ""))))
-    html = re.sub(r"\{[a-z_]+\}", "", html)
-    return HTMLResponse(html)
+    return _render_page(CODE_PAGE_HTML, kwargs)
 
 
 def _role_select_page(**kwargs) -> HTMLResponse:
+    return _render_page(ROLE_SELECT_PAGE_HTML, kwargs)
+
+
+def _render_page(template: str, kwargs: dict) -> HTMLResponse:
+    """渲染 OAuth 页面，统一把 message/error 转成新样式消息块。
+
+    message 是"已构造的 HTML 片段"：内嵌的用户/后端文本在构造时已转义，
+    这里不再整体二次转义，否则 <div class="msg err"> 会被转成纯文本。
+    """
     import html as _html
     import re
-    html = ROLE_SELECT_PAGE_HTML
+
+    # 兼容旧调用：error=xxx 转成新样式错误块（文本转义，包裹不转义）
+    if "error" in kwargs:
+        err = kwargs.pop("error")
+        kwargs["message"] = f'<div class="msg err">{_html.escape(str(err))}</div>'
+    elif "message" in kwargs and kwargs.get("message"):
+        msg = str(kwargs["message"])
+        # 兼容旧调用：message 已是 <div class="error|success">...</div>
+        m = re.match(r'^<div class="(?:msg )?(err|ok|error|success)">(.*)</div>$', msg, re.S)
+        if m:
+            css = "err" if m.group(1) in ("err", "error") else "ok"
+            text = _html.escape(m.group(2))
+            kwargs["message"] = f'<div class="msg {css}">{text}</div>'
+        else:
+            # 纯文本 message：转义后包成错误块
+            kwargs["message"] = f'<div class="msg err">{_html.escape(msg)}</div>'
+
+    rendered = template
     for k, v in kwargs.items():
-        html = html.replace("{" + k + "}", str(_html.escape(str(v or ""))))
-    html = re.sub(r"\{[a-z_]+\}", "", html)
-    return HTMLResponse(html)
+        if k == "message":
+            rendered = rendered.replace("{message}", str(v or ""))
+        else:
+            rendered = rendered.replace("{" + k + "}", str(_html.escape(str(v or ""))))
+    # 清理剩余未替换的占位符
+    rendered = re.sub(r"\{[a-z_]+\}", "", rendered)
+    return HTMLResponse(rendered)
 
 
 async def _finalize_authorize(provider, client, state, redirect_uri, scope, resource, code_challenge):
