@@ -52,11 +52,14 @@ def _user(ctx: Context) -> dict:
         from fastmcp.server.dependencies import get_access_token
         token = get_access_token()
         if token is not None:
-            claims = token.claims or {}
+            claims = dict(token.claims or {})
             # Backend 签发的 Token 标准 claim 名为 sub；MCP 角色仍从 role 读取。
             if "user_id" not in claims and claims.get("sub"):
-                claims = dict(claims)
                 claims["user_id"] = claims["sub"]
+            # scope 存在 AccessToken.scopes 字段而非 claims，合并进来供
+            # _require_role 校验（否则所有受 scope 保护的工具都报缺 scope）。
+            if token.scopes and "scope" not in claims:
+                claims["scope"] = " ".join(token.scopes)
             return claims
     except Exception:
         pass
