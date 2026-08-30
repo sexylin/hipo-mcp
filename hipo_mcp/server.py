@@ -331,6 +331,18 @@ def import_resume(
     return json.dumps(result, ensure_ascii=False)
 
 
+@mcp.tool(
+    name="match_jobs_for_me",
+    description="根据我的简历匹配所有已发布的岗位（需要 candidate 角色）。返回按匹配度排序的岗位列表，含评分明细（行业/技能/经验）和每日投递剩余次数。",
+)
+def match_jobs_for_me(ctx: Context) -> str:
+    """求职者视角：根据我的简历匹配岗位"""
+    err = _require_role(ctx, "candidate")
+    if err: return json.dumps({"error": err}, ensure_ascii=False)
+    result = _get(ctx, "/candidate/matches")
+    return json.dumps(result, ensure_ascii=False)
+
+
 # ══════════════════════════════════════════
 # HTTP 入口
 # ══════════════════════════════════════════
