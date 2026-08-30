@@ -146,6 +146,20 @@ def _post(ctx: Context, path: str, body: dict = None, timeout: int = 15) -> dict
         return resp.json()
 
 
+def _put(ctx: Context, path: str, body: dict = None, timeout: int = 15) -> dict:
+    with httpx.Client(timeout=timeout) as client:
+        resp = client.put(f"{API_BASE}{path}", json=body or {}, headers=_headers(ctx))
+        if resp.status_code == 401: raise ValueError("HiPo Work OAuth 授权无效或已过期，请重新授权")
+        if resp.status_code == 403: raise ValueError("权限不足，请确认账号角色")
+        if resp.status_code == 422:
+            detail = resp.json().get("detail", "参数格式错误")
+            raise ValueError(f"参数错误: {detail}")
+        if resp.status_code == 429: raise ValueError("请求过于频繁，请稍后重试")
+        if resp.status_code >= 500: raise ValueError("后端服务暂时不可用，请稍后重试")
+        resp.raise_for_status()
+        return resp.json()
+
+
 # ══════════════════════════════════════════
 # MCP Tools
 # ══════════════════════════════════════════
@@ -233,6 +247,22 @@ def publish_job(
         "salary_min": salary_min, "salary_max": salary_max, "salary_unit": salary_unit,
     })
     return json.dumps({"job_id": result.get("job_id"), "title": result.get("title"), "location": result.get("location")}, ensure_ascii=False)
+
+
+@mcp.tool(
+    name="close_job",
+    description="关闭已发布的招聘岗位（需要 employer 角色）。关闭后求职者无法再看到/投递该职位，也不再参与匹配。",
+)
+def close_job(ctx: Context, job_id: str) -> str:
+    """关闭岗位"""
+    err = _require_role(ctx, "employer", "write")
+    if err: return json.dumps({"error": err}, ensure_ascii=False)
+    result = _put(ctx, f"/employer/requirements/{job_id}", {"status": "closed"})
+    return json.dumps({
+        "job_id": result.get("id") or job_id,
+        "title": result.get("title"),
+        "status": result.get("status"),
+    }, ensure_ascii=False)
 
 
 @mcp.tool(
