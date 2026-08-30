@@ -392,6 +392,125 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 """
 
 
+DONE_PAGE_HTML = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HiPo Work · 准备就绪</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
+  --bg:#0b0d17; --card:rgba(20,22,38,.86);
+  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.22);
+  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center;
+  color:var(--text); overflow:hidden; position:relative;
+}
+body::before{ content:""; position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
+  mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
+.wrap{ position:relative; z-index:1; width:100%; max-width:440px; padding:24px; }
+.card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:38px 34px 30px;
+  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
+.brand{ display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+.logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center; }
+.logo svg{ width:24px; height:24px; }
+.brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
+.brand p{ font-size:13px; color:var(--dim); margin-top:2px; }
+.ready{ display:flex; align-items:center; gap:14px; margin-bottom:24px;
+  background:rgba(16,185,129,.10); border:1px solid rgba(16,185,129,.25);
+  border-radius:16px; padding:16px 18px; }
+.ready .badge{ width:40px; height:40px; border-radius:50%; flex:none;
+  background:linear-gradient(135deg,#10b981,#059669);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 6px 18px rgba(16,185,129,.35); }
+.ready .badge svg{ width:22px; height:22px; }
+.ready h2{ font-size:17px; font-weight:700; }
+.ready p{ font-size:13px; color:var(--dim); margin-top:3px; line-height:1.5; }
+.guide{ margin-bottom:24px; }
+.guide .t{ font-size:13px; font-weight:700; color:var(--dim); text-transform:uppercase;
+  letter-spacing:1.2px; margin-bottom:14px; }
+.guide .p{ font-size:15px; font-weight:700; margin-bottom:16px; color:#a5b4fc; }
+.guide ul{ list-style:none; }
+.guide li{ display:flex; align-items:center; gap:10px; padding:9px 0;
+  font-size:13.5px; color:var(--text); line-height:1.5; }
+.guide li .dot{ width:6px; height:6px; border-radius:50%; flex:none;
+  background:linear-gradient(135deg,var(--brand),var(--brand2)); }
+.btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
+  font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 10px 30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  transition:transform .15s, box-shadow .2s, filter .2s; }
+.btn:hover{ transform:translateY(-1px); filter:brightness(1.06);
+  box-shadow:0 14px 36px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+.btn:active{ transform:translateY(0); }
+.foot{ text-align:center; font-size:12px; color:var(--dim); margin-top:22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      </div>
+      <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
+    </div>
+    <div class="ready">
+      <div class="badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <div>
+        <h2>身份已就绪 · {role_name}</h2>
+        <p>接下来可以直接让 AI 帮你处理</p>
+      </div>
+    </div>
+    <div class="guide">
+      <div class="t">接下来你可以</div>
+      <div class="p">{role_summary}</div>
+      <ul>{guide_items}</ul>
+    </div>
+    <form method="POST" action="/authorize">
+      <input type="hidden" name="client_id" value="{client_id}">
+      <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="state" value="{state}">
+      <input type="hidden" name="scope" value="{scope}">
+      <input type="hidden" name="resource" value="{resource}">
+      <input type="hidden" name="code_challenge" value="{code_challenge}">
+      <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+      <input type="hidden" name="step" value="finalize">
+      <input type="hidden" name="email" value="{email}">
+      <input type="hidden" name="role" value="{role}">
+      <button type="submit" class="btn">完成授权</button>
+    </form>
+    <div class="foot">完成后自动返回客户端，无需重复授权</div>
+  </div>
+</div>
+</body>
+</html>
+"""
+
+
 def _login_page(**kwargs) -> HTMLResponse:
     return _render_page(LOGIN_PAGE_HTML, kwargs)
 
@@ -404,7 +523,32 @@ def _role_select_page(**kwargs) -> HTMLResponse:
     return _render_page(ROLE_SELECT_PAGE_HTML, kwargs)
 
 
-def _render_page(template: str, kwargs: dict) -> HTMLResponse:
+def _done_page(**kwargs) -> HTMLResponse:
+    return _render_page(DONE_PAGE_HTML, kwargs, raw_keys=frozenset({"guide_items"}))
+
+
+def _role_guide(role: str) -> dict:
+    """按角色组装授权完成页的引导文案（简单直接，2 条步骤）。"""
+    if role == "employer":
+        return {
+            "role_name": "招聘方",
+            "role_summary": "让 AI 帮你发布岗位、匹配候选人",
+            "guide_items": (
+                '<li><span class="dot"></span><span>让 Agent 发布岗位、匹配合适的候选人</span></li>'
+                '<li><span class="dot"></span><span>回到客户端，向 Agent 下达任务即可开始</span></li>'
+            ),
+        }
+    return {
+        "role_name": "求职者",
+        "role_summary": "让 AI 帮你导入简历、管理求职档案",
+        "guide_items": (
+            '<li><span class="dot"></span><span>把简历发给 Agent，让它帮你导入求职档案</span></li>'
+            '<li><span class="dot"></span><span>回到客户端，向 Agent 下达任务即可开始</span></li>'
+        ),
+    }
+
+
+def _render_page(template: str, kwargs: dict, raw_keys=frozenset()) -> HTMLResponse:
     """渲染 OAuth 页面，统一把 message/error 转成新样式消息块。
 
     message 是"已构造的 HTML 片段"：内嵌的用户/后端文本在构造时已转义，
@@ -431,8 +575,8 @@ def _render_page(template: str, kwargs: dict) -> HTMLResponse:
 
     rendered = template
     for k, v in kwargs.items():
-        if k == "message":
-            rendered = rendered.replace("{message}", str(v or ""))
+        if k == "message" or k in raw_keys:
+            rendered = rendered.replace("{" + k + "}", str(v or ""))
         else:
             rendered = rendered.replace("{" + k + "}", str(_html.escape(str(v or ""))))
     # 清理剩余未替换的占位符
@@ -742,6 +886,27 @@ def authorize_route(provider):
                 "role": user_data.get("role", selected_role),
                 "scopes": scope.split() if scope else ["profile"],
             })
+            # 方案A：角色选定后先展示"准备就绪"引导页，用户点"完成授权"才真正跳转回调
+            guide = _role_guide(user_data.get("role", selected_role))
+            return _done_page(
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                response_type="code",
+                state=state,
+                scope=scope,
+                resource=resource,
+                code_challenge=code_challenge,
+                code_challenge_method=code_challenge_method,
+                email=email,
+                role=user_data.get("role", selected_role),
+                **guide,
+            )
+
+        if step == "finalize":
+            # 用户在引导页点了"完成授权"：真正生成授权码并跳回客户端
+            final_role = provider.peek_pending_auth(state).get("role", "candidate")
+            if final_role not in ("candidate", "employer"):
+                final_role = "candidate"
             return await _finalize_authorize(
                 provider, client, state, redirect_uri, scope, resource, code_challenge
             )
