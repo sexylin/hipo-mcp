@@ -4,7 +4,6 @@ import json
 import time
 import os
 import httpx
-from collections import defaultdict
 
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -13,8 +12,19 @@ BACKEND_URL = os.environ.get("HIPO_BACKEND_URL", "http://127.0.0.1:8000")
 API_BASE = f"{BACKEND_URL}/api/v1"
 MCP_INTERNAL_SECRET = os.environ.get("MCP_INTERNAL_SECRET", "")
 
-# MCP 层限流桶：IP → [timestamp]
-_send_code_bucket: dict[str, list] = defaultdict(list)
+# MCP 层限流桶：IP → [timestamp]。默认进程内内存；配置 HIPO_REDIS_URL 后
+# 用 Redis（多副本共享计数），见 storage.py（P1-16）。
+def _rate_limit_hit(client_ip: str, window: int = 60, limit: int = 5) -> bool:
+    """滑动窗口限流：window 秒内同一 IP 超过 limit 次则拒绝。"""
+    from .storage import STORE
+
+    now = time.time()
+    key = f"rate:{client_ip}"
+    bucket = STORE.get(key, []) or []
+    bucket = [ts for ts in bucket if ts > now - window]
+    bucket.append(now)
+    STORE.set(key, bucket, ttl=window)
+    return len(bucket) > limit
 
 
 # ══════════════════════════════════════════
@@ -338,6 +348,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <h2>选择你的身份</h2>
       <p>首次使用，请选择你的身份。不同身份将获得对应的 AI 能力与权限。</p>
     </div>
+    {message}
     <form method="POST" action="/authorize">
       <input type="hidden" name="client_id" value="{client_id}">
       <input type="hidden" name="redirect_uri" value="{redirect_uri}">
@@ -349,6 +360,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
       <input type="hidden" name="step" value="role_select">
       <input type="hidden" name="email" value="{email}">
+      <input type="hidden" name="ticket" value="{ticket}">
       <input type="hidden" name="role" value="candidate">
       <button type="submit" class="role">
         <div class="row">
@@ -372,6 +384,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
       <input type="hidden" name="step" value="role_select">
       <input type="hidden" name="email" value="{email}">
+      <input type="hidden" name="ticket" value="{ticket}">
       <input type="hidden" name="role" value="employer">
       <button type="submit" class="role alt">
         <div class="row">
@@ -754,14 +767,9 @@ def authorize_route(provider):
         }
 
         if step == "send_code":
-            # MCP 层限流：防止批量轰炸验证码发送接口。
+            # MCP 层限流：防止批量轰炸验证码发送接口（持久化存储，见 _rate_limit_hit）。
             client_ip = request.client.host if request.client else "unknown"
-            now = time.time()
-            _send_code_bucket[client_ip].append(now)
-            _send_code_bucket[client_ip] = [
-                timestamp for timestamp in _send_code_bucket[client_ip] if timestamp > now - 60
-            ]
-            if len(_send_code_bucket[client_ip]) > 5:
+            if _rate_limit_hit(client_ip, window=60, limit=5):
                 return _login_page(**page_context, message="请求过于频繁，请稍后再试")
 
             try:
@@ -807,10 +815,13 @@ def authorize_route(provider):
             user_id = user_data.get("user_id", "")
             verified_role = user_data.get("role", role) or "candidate"
             is_new_user = user_data.get("is_new_user", False)
+            # P1-7: register-or-login 对新用户签发的一次性角色票据，随 pending 记录暂存
+            role_change_ticket = user_data.get("role_change_ticket") if is_new_user else None
             provider.store_pending_auth(state, {
                 "user_id": user_id,
                 "role": verified_role,
                 "scopes": scope.split() if scope else ["profile"],
+                "role_change_ticket": role_change_ticket,
             })
 
             # 新用户：验证码通过后先选角色（求职者/招聘方），再继续授权。
@@ -825,6 +836,7 @@ def authorize_route(provider):
                     code_challenge=code_challenge,
                     code_challenge_method=code_challenge_method,
                     email=email,
+                    ticket=role_change_ticket or "",
                 )
 
             return await _finalize_authorize(
@@ -832,10 +844,12 @@ def authorize_route(provider):
             )
 
         if step == "role_select":
-            # 新用户选定角色：用内部密钥调用后端更新角色，然后完成授权。
+            # 新用户选定角色：用内部密钥 + 一次性角色票据调用后端更新角色，然后完成授权。
             selected_role = form.get("role", "candidate")
             if selected_role not in ("candidate", "employer"):
                 selected_role = "candidate"
+            # P1-7: 从表单取 register-or-login 签发的一次性票据（随验证码通过后下发）
+            role_ticket = form.get("ticket", "")
             # 非破坏性读取：pending 记录必须保留到 authorize() 消费，
             # 否则 role_select 会把 transaction/user_id 提前 pop 掉，
             # 导致最终 authorize 时 "Authorization transaction mismatch"。
@@ -850,7 +864,7 @@ def authorize_route(provider):
                 async with httpx.AsyncClient(timeout=10.0) as hc:
                     resp = await hc.put(
                         f"{API_BASE}/auth/me/role",
-                        json={"user_id": user_id, "role": selected_role},
+                        json={"user_id": user_id, "role": selected_role, "ticket": role_ticket},
                         headers={"X-MCP-Internal-Secret": MCP_INTERNAL_SECRET},
                     )
                     if resp.status_code != 200:
@@ -866,6 +880,8 @@ def authorize_route(provider):
                             code_challenge=code_challenge,
                             code_challenge_method=code_challenge_method,
                             email=email,
+                            ticket=role_ticket,
+                            error=msg,
                         )
                     user_data = resp.json()
             except Exception as exc:
@@ -879,6 +895,8 @@ def authorize_route(provider):
                     code_challenge=code_challenge,
                     code_challenge_method=code_challenge_method,
                     email=email,
+                    ticket=role_ticket,
+                    error=f"角色设置失败：{str(exc)[:80]}",
                 )
 
             provider.store_pending_auth(state, {

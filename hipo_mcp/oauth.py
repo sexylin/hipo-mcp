@@ -45,15 +45,29 @@ class HiPoOAuthProvider(OAuthProvider):
 
     def __init__(self, base_url: str, **kwargs):
         super().__init__(base_url=base_url, **kwargs)
-        # Phase 1 keeps protocol state in memory. Phase 2 moves this state to
-        # Redis/PostgreSQL before horizontal scaling.
-        self.clients: dict[str, OAuthClientInformationFull] = {}
-        self.auth_codes: dict[str, AuthorizationCode] = {}
-        self.access_tokens: dict[str, AccessToken] = {}
-        self.refresh_tokens: dict[str, RefreshToken] = {}
-        self._access_to_refresh: dict[str, str] = {}
-        self._refresh_to_access: dict[str, str] = {}
-        self._pending_auth: dict[str, dict] = {}
+        # OAuth 协议状态存储：默认进程内内存；配置 HIPO_REDIS_URL + redis-py
+        # 后落到 Redis，支持多副本水平扩展（P1-16）。
+        from .storage import STORE
+
+        self._store = STORE
+        if STORE.redis_enabled:
+            from .storage import RedisDict
+
+            self.clients = RedisDict("oauth:clients", STORE._store)
+            self.auth_codes = RedisDict("oauth:auth_codes", STORE._store)
+            self.access_tokens = RedisDict("oauth:access_tokens", STORE._store)
+            self.refresh_tokens = RedisDict("oauth:refresh_tokens", STORE._store)
+            self._access_to_refresh = RedisDict("oauth:acc2ref", STORE._store)
+            self._refresh_to_access = RedisDict("oauth:ref2acc", STORE._store)
+            self._pending_auth = RedisDict("oauth:pending_auth", STORE._store)
+        else:
+            self.clients: dict[str, OAuthClientInformationFull] = {}
+            self.auth_codes: dict[str, AuthorizationCode] = {}
+            self.access_tokens: dict[str, AccessToken] = {}
+            self.refresh_tokens: dict[str, RefreshToken] = {}
+            self._access_to_refresh: dict[str, str] = {}
+            self._refresh_to_access: dict[str, str] = {}
+            self._pending_auth: dict[str, dict] = {}
 
     def store_pending_transaction(self, state: str, transaction: dict) -> None:
         """Store the browser transaction that must survive the login form."""

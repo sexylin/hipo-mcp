@@ -227,7 +227,7 @@ def register_or_login(email: str, code: str, role: str = "candidate") -> str:
 
 @mcp.tool(
     name="publish_job",
-    description="发布招聘岗位（需要 employer 角色）。支持结构化条件 required/preferred。",
+    description="发布招聘岗位（需要 employer 角色）。支持结构化条件 required/preferred。薪资面议时两个 salary 字段都不传即可。",
 )
 def publish_job(
     ctx: Context,
@@ -241,6 +241,10 @@ def publish_job(
 ) -> str:
     err = _require_role(ctx, "employer", "write")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
+    # P1-17 薪资面议契约：salary_min 与 salary_max 均为空 → 面议 → salary_unit 传 None；
+    # 只有提供了下限或上限时才带 unit，避免"面议"被错标为 monthly。
+    if salary_min is None and salary_max is None:
+        salary_unit = None
     result = _post(ctx, "/agent/publish-job", {
         "title": title, "raw_text": raw_text or "",
         "required": required, "preferred": preferred or {},
@@ -349,7 +353,10 @@ def import_resume(
     """导入简历"""
     err = _require_role(ctx, "candidate")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
-    result = _post(ctx, "/agent/import-resume", {
+
+    # P1-6: 空数据保护——后端 import-resume 语义是"先清空旧数据再写入"，
+    # Agent 误传空 JSON 或解析失败时会清空候选人已有简历，必须在客户端拦截。
+    payload = {
         "basic_info": basic_info,
         "work_experiences": work_experiences or [],
         "projects": projects or [],
@@ -357,7 +364,16 @@ def import_resume(
         "skills": skills or [],
         "certificates": certificates or [],
         "languages": languages or [],
-    })
+    }
+    if not payload["basic_info"] and not payload["work_experiences"] and \
+            not payload["projects"] and not payload["education"] and \
+            not payload["skills"] and not payload["certificates"] and \
+            not payload["languages"]:
+        return json.dumps(
+            {"error": "简历数据为空，拒绝导入以保护已有数据（EMPTY_RESUME）"},
+            ensure_ascii=False,
+        )
+    result = _post(ctx, "/agent/import-resume", payload)
     return json.dumps(result, ensure_ascii=False)
 
 

@@ -19,9 +19,15 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "fastmcp>=1.0.0",
+    # P1-19: fastmcp 锁 3.x（部署用 3.4.7，代码依赖 fastmcp.server.auth.auth /
+    # fastmcp.server.dependencies 的 3.x API）。跨大版本（4.x+）可能破坏 import → 服务起不来。
+    "fastmcp>=3.4.7,<4.0.0",
     "httpx>=0.24.0",
 ]
+
+[project.optional-dependencies]
+# P1-16: 配置 HIPO_REDIS_URL 后将 OAuth 状态/限流桶持久化到 Redis（多副本水平扩展）。
+redis = ["redis>=5.0.0"]
 
 [project.urls]
 homepage = "https://hipowork.com"
