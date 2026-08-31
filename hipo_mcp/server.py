@@ -379,7 +379,7 @@ def import_resume(
 
 @mcp.tool(
     name="match_jobs_for_me",
-    description="根据我的简历匹配所有已发布的岗位（需要 candidate 角色）。返回按匹配度排序的岗位列表，含评分明细（行业/技能/经验）和每日投递剩余次数。",
+    description="根据我的简历匹配所有已发布的岗位（需要 candidate 角色）。返回按匹配度排序的岗位列表，含评分明细（行业/技能/经验）。",
 )
 def match_jobs_for_me(ctx: Context) -> str:
     """求职者视角：根据我的简历匹配岗位"""
