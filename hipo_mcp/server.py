@@ -9,6 +9,7 @@
 
 import os
 import json
+from typing import Optional
 import httpx
 from fastmcp import FastMCP, Context
 
@@ -338,7 +339,7 @@ def market_analysis(ctx: Context, keyword: str = None, industry: str = None, loc
 
 @mcp.tool(
     name="import_resume",
-    description="导入简历（需要 candidate 角色）。Agent 自行解析简历，完整传入工作经历、项目经历、教育经历、技能等结构化数据。项目经历可选。",
+    description="导入简历（需要 candidate 角色）。Agent 自行解析简历，完整传入工作经历、项目经历、教育经历、技能等结构化数据。项目经历可选。可选携带原始简历附件（文件名 + base64 内容），随导入一并存档到对象存储供 HR 查看。",
 )
 def import_resume(
     ctx: Context,
@@ -349,8 +350,11 @@ def import_resume(
     skills: list = None,
     certificates: list = None,
     languages: list = None,
+    resume_file_name: Optional[str] = None,
+    resume_file_type: Optional[str] = None,
+    resume_file_base64: Optional[str] = None,
 ) -> str:
-    """导入简历"""
+    """导入简历（可选携带原始附件 base64，存档到对象存储）"""
     err = _require_role(ctx, "candidate")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
 
@@ -373,6 +377,11 @@ def import_resume(
             {"error": "简历数据为空，拒绝导入以保护已有数据（EMPTY_RESUME）"},
             ensure_ascii=False,
         )
+    # 附件字段仅在同时提供文件名和 base64 内容时透传（成对出现）
+    if resume_file_name and resume_file_base64:
+        payload["resume_file_name"] = resume_file_name
+        payload["resume_file_type"] = resume_file_type or ""
+        payload["resume_file_base64"] = resume_file_base64
     result = _post(ctx, "/agent/import-resume", payload)
     return json.dumps(result, ensure_ascii=False)
 
