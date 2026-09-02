@@ -1,6 +1,6 @@
 [project]
 name = "hipo-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "HiPo Work MCP Server — AI 招聘平台 MCP 接口（OAuth 2.0 认证）"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -58,6 +58,8 @@ https://mcp.hipowork.com/mcp
 
 > Token 30 天有效，自动刷新，无需手动配置 API Key。
 
+> **已登录用户免重复验证**：若你已在 Web 端（hipowork.com）登录，登录态会自动同步到授权域。之后从 Agent 发起授权时，授权页直接显示「确认授权」按钮，无需再次输入邮箱和验证码（隐藏 iframe + 一次性 HMAC 票据，60 秒时效，Cookie 90 天）。
+
 ---
 
 ## 工具列表
