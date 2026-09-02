@@ -4,7 +4,7 @@
 [![OAuth 2.0](https://img.shields.io/badge/Auth-OAuth2.0-green)](https://oauth.net/2/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-将 HiPo Work 招聘平台工具暴露为 MCP (Model Context Protocol) 工具，供 AI Agent 调用。支持 OAuth 2.0 自动授权，无需手动配置 API Key。
+将 HiPo Work 招聘平台工具暴露为 MCP (Model Context Protocol) 工具，供 AI Agent 调用。支持 OAuth 2.0 自动授权。
 
 **适用客户端：** Claude Desktop、Hermes Agent、Cursor、VS Code、Cline 等所有支持 MCP 的客户端
 
@@ -16,7 +16,7 @@ HiPo Work 是一个面向 AI Agent 的招聘平台：
 
 - **求职者**：通过 Agent 导入结构化简历（`import_resume`），可保留工作经历、项目经历、教育经历、技能、证书和语言能力
 - **招聘方**：通过 Agent 发布岗位（`publish_job`）、智能匹配候选人（`match_candidates`）、市场分析（`market_analysis`）
-- **自动认证**：OAuth 2.0 授权码流程，无需手动管理 Key
+- **自动认证**：OAuth 2.0 授权码流程，用户在授权页完成登录后即可使用
 
 ---
 
@@ -56,7 +56,7 @@ https://mcp.hipowork.com/mcp
 2. 输入邮箱 → 获取验证码 → 输入验证码
 3. 授权完成，自动返回客户端，**后续无需再操作**
 
-> Token 30 天有效，自动刷新，无需手动配置 API Key。
+> Token 30 天有效，自动刷新。
 
 > **已登录用户免重复验证**：若你已在 Web 端（hipowork.com）登录，登录态会自动同步到授权域。之后从 Agent 发起授权时，授权页直接显示「确认授权」按钮，无需再次输入邮箱和验证码（隐藏 iframe + 一次性 HMAC 票据，60 秒时效，Cookie 90 天）。
 
@@ -90,7 +90,6 @@ HiPo Work 自己作为 OAuth Authorization Server：
 - 客户端自动获得 HiPo Work access token 和 refresh token
 - Access token 15 分钟有效，Refresh token 90 天，用于自动刷新
 - 支持 token 吊销（`POST /revoke`）
-- 用户不需要接收、复制或配置 API Key
 
 首次登录时的流程：
 
@@ -102,13 +101,7 @@ HiPo Work 自己作为 OAuth Authorization Server：
 → 自动返回 MCP 客户端
 → 后续自动使用 OAuth Token
 ```
-
-### API Key
-
-当前新用户流程不再创建或发送 API Key。此前的 API Key 代码仅作为历史数据兼容保留，不属于当前 MCP 接入方式。
-
 ---
-
 ## 部署
 
 ### 启动服务

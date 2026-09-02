@@ -4,7 +4,7 @@
 1. MCP 客户端发现 OAuth 支持，自动打开浏览器到 /authorize
 2. 浏览器显示登录页（邮箱+验证码）
 3. 用户登录成功 → 自动重定向回客户端 → 客户端换 token
-4. 后续请求自动带 Bearer token，无需手动配置 API Key
+4. 后续请求自动带 Bearer token
 """
 
 import os
@@ -213,7 +213,6 @@ def register_or_login(email: str, code: str, role: str = "candidate") -> str:
             return json.dumps({"error": "请求过于频繁，请稍后重试"}, ensure_ascii=False)
         resp.raise_for_status()
         result = resp.json()
-    # 新的 MCP/OAuth 登录接口已统一不返回 API Key。
     return json.dumps({
         "user_id": result.get("user_id"),
         "email": result.get("email"),

@@ -1,10 +1,10 @@
 # HiPo Work 原生 OAuth 改造说明
 
-当前改造目标：HiPo Work 自己作为 OAuth Authorization Server。邮箱验证码只用于确认 HiPo Work 用户身份；MCP 客户端通过 Authorization Code + PKCE 获得 HiPo Work OAuth access/refresh token，不再接收、复制或使用用户 API Key。
+当前改造目标：HiPo Work 自己作为 OAuth Authorization Server。邮箱验证码只用于确认 HiPo Work 用户身份；MCP 客户端通过 Authorization Code + PKCE 获得 HiPo Work OAuth access/refresh token。
 
 ## 当前已实现
 
-- `POST /api/v1/auth/register-or-login`：邮箱验证码注册/登录，只返回用户身份摘要，不创建或发送 API Key。
+- `POST /api/v1/auth/register-or-login`：邮箱验证码注册/登录，只返回用户身份摘要。
 - `POST /api/v1/auth/oauth/exchange`：受信任的 MCP 服务将已验证用户身份换成 HiPo OAuth token。
 - `POST /api/v1/auth/oauth/refresh`：受信任的 MCP 服务刷新 OAuth token。
 - 后端业务认证：识别带 `aud=hipo-work`、`auth_source=oauth`、`type=oauth_access` 的 Bearer Token。
@@ -53,7 +53,7 @@ Backend    → HiPo OAuth access_token + refresh_token
 MCP Client → MCP initialize/tools/call，自动携带 Bearer Token
 ```
 
-用户不会看到 API Key。网页 Cookie 与 Agent Token 不共享；Agent 使用自己的 OAuth 授权结果。
+网页 Cookie 与 Agent Token 不共享；Agent 使用自己的 OAuth 授权结果。
 
 ## 重要限制
 
