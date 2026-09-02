@@ -89,6 +89,20 @@ class MemoryStore:
             self._data.pop(key, None)
             self._data.pop(f"{key}:exp", None)
 
+    def setnx(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        """Set if not exists；返回 True 表示本次成功写入（首次）。"""
+        with self._lock:
+            exp = self._data.get(f"{key}:exp")
+            if exp is not None and exp < time.time():
+                self._data.pop(key, None)
+                self._data.pop(f"{key}:exp", None)
+            if key in self._data:
+                return False
+            self._data[key] = value
+            if ttl is not None:
+                self._data[f"{key}:exp"] = time.time() + ttl
+            return True
+
     def incr(self, key: str, ttl: Optional[int] = None) -> int:
         with self._lock:
             now = time.time()
@@ -141,6 +155,18 @@ class RedisStore:
             self._client.delete(key)
         except Exception as exc:  # noqa: BLE001
             print(f"WARN: Redis delete failed ({key}): {exc}")
+
+    def setnx(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        """Set if not exists（原子）；返回 True 表示本次成功写入（首次）。"""
+        raw = pickle.dumps(value)
+        try:
+            ok = self._client.set(key, raw, nx=True)
+            if ok and ttl is not None:
+                self._client.expire(key, ttl)
+            return bool(ok)
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARN: Redis setnx failed ({key}): {exc}")
+            return False
 
     def incr(self, key: str, ttl: Optional[int] = None) -> int:
         try:
@@ -230,6 +256,9 @@ class _Store:
 
     def incr(self, key: str, ttl: Optional[int] = None) -> int:
         return self._store.incr(key, ttl)
+
+    def setnx(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        return self._store.setnx(key, value, ttl)
 
     def redis_dict(self, prefix: str) -> MutableMapping[str, Any]:
         if self.redis_enabled:

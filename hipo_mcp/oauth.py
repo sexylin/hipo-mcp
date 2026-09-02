@@ -354,6 +354,7 @@ class HiPoOAuthProvider(OAuthProvider):
         from mcp.server.auth.json_response import PydanticJSONResponse
         from mcp.server.auth.routes import build_metadata, cors_middleware
         from .routes import authorize_route, login_page_route
+        from .sso_routes import sso_logout_route, sso_route
 
         standard_routes = super().get_routes(mcp_path)
         routes = [
@@ -389,6 +390,8 @@ class HiPoOAuthProvider(OAuthProvider):
             [
                 Route("/authorize", endpoint=login_page_route(self), methods=["GET"]),
                 Route("/authorize", endpoint=authorize_route(self), methods=["POST"]),
+                Route("/sso", endpoint=sso_route, methods=["GET"]),
+                Route("/sso/logout", endpoint=sso_logout_route, methods=["GET"]),
             ]
         )
         return routes

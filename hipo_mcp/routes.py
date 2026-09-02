@@ -405,6 +405,126 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 """
 
 
+CONSENT_PAGE_HTML = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HiPo Work · 授权确认</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
+  --bg:#0b0d17; --card:rgba(20,22,38,.86);
+  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.2);
+  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+}
+html,body{height:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center;
+  color:var(--text); overflow:hidden; position:relative;
+}
+body::before{ content:""; position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
+  mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
+.wrap{ position:relative; z-index:1; width:100%; max-width:420px; padding:24px; }
+.card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:40px 36px 34px;
+  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
+.brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
+.logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  display:flex; align-items:center; justify-content:center; }
+.logo svg{ width:24px; height:24px; }
+.brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
+.brand p{ font-size:13px; color:var(--dim); margin-top:2px; }
+.head{ margin-bottom:22px; }
+.head h2{ font-size:22px; font-weight:700; letter-spacing:.2px; }
+.head p{ font-size:13.5px; color:var(--dim); margin-top:8px; line-height:1.6; }
+.app{ display:flex; align-items:center; gap:14px; margin-bottom:20px;
+  background:rgba(255,255,255,.045); border:1px solid var(--border); border-radius:16px; padding:16px 18px; }
+.app .ico{ width:42px; height:42px; border-radius:12px; flex:none;
+  background:linear-gradient(135deg,var(--brand),var(--brand2)); opacity:.9;
+  display:flex; align-items:center; justify-content:center; }
+.app .ico svg{ width:22px; height:22px; }
+.app .nm{ font-size:15px; font-weight:700; }
+.app .em{ font-size:12.5px; color:var(--dim); margin-top:2px; word-break:break-all; }
+.scopes{ margin-bottom:22px; }
+.scopes .t{ font-size:12px; font-weight:700; color:var(--dim); text-transform:uppercase;
+  letter-spacing:1px; margin-bottom:10px; }
+.scopes .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 12px;
+  border:1px solid var(--border); border-radius:999px; font-size:12.5px; color:var(--text);
+  margin:0 6px 6px 0; background:rgba(255,255,255,.04); }
+.scopes .chip svg{ width:13px; height:13px; color:#6ee7b7; flex:none; }
+.btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
+  font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  box-shadow:0 10px 30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  transition:transform .15s, box-shadow .2s, filter .2s; }
+.btn:hover{ transform:translateY(-1px); filter:brightness(1.06);
+  box-shadow:0 14px 36px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+.btn:active{ transform:translateY(0); }
+.msg{ font-size:13px; border-radius:12px; padding:11px 14px; margin-bottom:18px; line-height:1.5; }
+.msg.err{ background:rgba(244,63,94,.12); color:#fda4af; border:1px solid rgba(244,63,94,.25); }
+.foot{ text-align:center; font-size:12px; color:var(--dim); margin-top:22px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      </div>
+      <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
+    </div>
+    <div class="head">
+      <h2>确认授权</h2>
+      <p>你的账号已登录，确认后将授权该客户端使用以下权限，无需再次输入邮箱验证码。</p>
+    </div>
+    {message}
+    <div class="app">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div>
+      <div>
+        <div class="nm">{client_name}</div>
+        <div class="em">{role_name}</div>
+      </div>
+    </div>
+    <div class="scopes">
+      <div class="t">请求的权限</div>
+      {scope_chips}
+    </div>
+    <form method="POST" action="/authorize">
+      <input type="hidden" name="client_id" value="{client_id}">
+      <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="state" value="{state}">
+      <input type="hidden" name="scope" value="{scope}">
+      <input type="hidden" name="resource" value="{resource}">
+      <input type="hidden" name="code_challenge" value="{code_challenge}">
+      <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+      <input type="hidden" name="step" value="consent">
+      <button type="submit" class="btn">同意并授权</button>
+    </form>
+    <div class="foot">授权后你的 Agent 即可通过 MCP 替你处理招聘与求职事务</div>
+  </div>
+</div>
+</body>
+</html>
+"""
+
+
 DONE_PAGE_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -534,6 +654,29 @@ def _code_page(**kwargs) -> HTMLResponse:
 
 def _role_select_page(**kwargs) -> HTMLResponse:
     return _render_page(ROLE_SELECT_PAGE_HTML, kwargs)
+
+
+def _consent_page(**kwargs) -> HTMLResponse:
+    """已登录会话下的一键授权页（方案A：跳过邮箱验证码）。"""
+    scope = str(kwargs.get("scope") or "profile")
+    scope_labels = {
+        "profile": "读取账号基本信息",
+        "candidate:read": "查看求职档案",
+        "candidate:write": "更新求职档案",
+        "employer:read": "查看招聘信息",
+        "employer:write": "发布/管理岗位与候选人",
+    }
+    chips = []
+    for s in scope.split():
+        label = scope_labels.get(s, s)
+        chips.append(
+            f'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            f'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'
+            f'{label}</span>'
+        )
+    kwargs["scope_chips"] = "".join(chips) or '<span class="chip">profile</span>'
+    kwargs["role_name"] = "求职者" if kwargs.get("role") == "candidate" else "招聘方"
+    return _render_page(CONSENT_PAGE_HTML, kwargs, raw_keys=frozenset({"scope_chips"}))
 
 
 def _done_page(**kwargs) -> HTMLResponse:
@@ -681,6 +824,26 @@ def login_page_route(provider):
                 "resource": params.get("resource", ""),
             },
         )
+
+        # 方案A：web 已登录并同步过会话（SSO cookie）→ 直接渲染一键授权页，
+        # 跳过邮箱验证码。身份不写 pending，等 consent 提交时从 cookie 取。
+        from .sso_routes import get_sso_session
+
+        session = get_sso_session(request)
+        if session:
+            return _consent_page(
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                response_type="code",
+                state=state,
+                scope=scope,
+                resource=params.get("resource", ""),
+                code_challenge=code_challenge,
+                code_challenge_method=code_challenge_method,
+                client_name=getattr(client, "client_name", "") or client_id,
+                role=session["role"],
+                message="",
+            )
 
         return _login_page(
             client_id=client_id,
@@ -839,6 +1002,25 @@ def authorize_route(provider):
                     ticket=role_change_ticket or "",
                 )
 
+            return await _finalize_authorize(
+                provider, client, state, redirect_uri, scope, resource, code_challenge
+            )
+
+        if step == "consent":
+            # 方案A：SSO 会话已登录 → 一键授权。身份从 cookie 取，不依赖
+            # 邮箱验证码；cookie 由授权服务器签名，篡改会验签失败。
+            from .sso_routes import get_sso_session
+
+            session = get_sso_session(request)
+            if not session:
+                return _login_page(**page_context, message="登录已过期，请重新完成邮箱验证")
+            user_id = session["user_id"]
+            session_role = session["role"]
+            provider.store_pending_auth(state, {
+                "user_id": user_id,
+                "role": session_role,
+                "scopes": str(scope).split() if scope else ["profile"],
+            })
             return await _finalize_authorize(
                 provider, client, state, redirect_uri, scope, resource, code_challenge
             )
