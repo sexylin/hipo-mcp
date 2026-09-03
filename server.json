@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.sexylin/hipo-work",
   "title": "HiPo Work",
-  "description": "AI-agent recruitment platform for resume import, job publishing, and candidate matching.",
+  "description": "hipowork is an AI-agent recruitment platform for resume import,job publishing,candidate matching.",
   "repository": {
     "url": "https://github.com/sexylin/hipo-mcp",
     "source": "github",
     "id": "1342401512"
   },
-  "version": "0.3.0",
+  "version": "0.3.1",
   "websiteUrl": "https://hipowork.com",
   "remotes": [
     {

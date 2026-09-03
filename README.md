@@ -56,9 +56,7 @@ https://mcp.hipowork.com/mcp
 2. 输入邮箱 → 获取验证码 → 输入验证码
 3. 授权完成，自动返回客户端，**后续无需再操作**
 
-> Token 30 天有效，自动刷新。
-
-> **已登录用户免重复验证**：若你已在 Web 端（hipowork.com）登录，登录态会自动同步到授权域。之后从 Agent 发起授权时，授权页直接显示「确认授权」按钮，无需再次输入邮箱和验证码（隐藏 iframe + 一次性 HMAC 票据，60 秒时效，Cookie 90 天）。
+> **已登录用户免重复验证**：若你已在 Web 端（hipowork.com）登录，登录态会自动同步到授权域。之后从 Agent 发起授权时，授权页直接显示「确认授权」按钮，无需再次输入邮箱和验证码
 
 ---
 
@@ -81,20 +79,13 @@ https://mcp.hipowork.com/mcp
 ## 认证机制
 
 ### OAuth 2.0（唯一推荐方式）
-
-HiPo Work 自己作为 OAuth Authorization Server：
-
-- 使用 Authorization Code + PKCE（S256）
-- 用户在 HiPo Work 授权页面完成邮箱验证码登录
-- 用户明确授权当前 MCP 客户端
-- 客户端自动获得 HiPo Work access token 和 refresh token
-- Access token 15 分钟有效，Refresh token 90 天，用于自动刷新
-- 支持 token 吊销（`POST /revoke`）
-
 首次登录时的流程：
 
 ```text
 配置 MCP 地址
+```
+https://mcp.hipowork.com/mcp
+```
 → 客户端打开 HiPo Work 授权页
 → 输入邮箱和验证码
 → 确认角色及客户端权限
