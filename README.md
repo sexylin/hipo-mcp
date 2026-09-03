@@ -82,10 +82,7 @@ https://mcp.hipowork.com/mcp
 首次登录时的流程：
 
 ```text
-配置 MCP 地址
-```
-https://mcp.hipowork.com/mcp
-```
+配置 MCP 地址 `https://mcp.hipowork.com/mcp`
 → 客户端打开 HiPo Work 授权页
 → 输入邮箱和验证码
 → 确认角色及客户端权限
