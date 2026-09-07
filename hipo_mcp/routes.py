@@ -36,14 +36,14 @@ LOGIN_PAGE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiPo Work · 授权登录</title>
+<title>HiPo Work 认证</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
-  --bg:#0b0d17; --card:rgba(20,22,38,.86);
-  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.2);
-  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+  --brand:#0a66c2; --brand2:#084f9e; --accent:#0a66c2;
+  --bg:#f4f2ee; --card:#ffffff;
+  --border:rgba(0,0,0,.08); --border-hover:rgba(0,0,0,.18);
+  --text:#191919; --dim:#5f6775; --radius:20px;
 }
 html,body{height:100%;}
 body{
@@ -53,24 +53,24 @@ body{
 }
 body::before{ content:""; position:fixed; inset:0; z-index:0;
   background:
-    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
-    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
-    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+    radial-gradient(620px 420px at 12% 18%, rgba(10,102,194,.08), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(10,102,194,.05), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(10,102,194,.03), transparent 60%); }
 body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,0,0,.025) 1px,transparent 1px);
   background-size:46px 46px;
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
   mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
 .wrap{ position:relative; z-index:1; width:100%; max-width:404px; padding:24px; }
 .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
   padding:40px 36px 34px;
-  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.06);
   -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
 .brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
 .logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow:0 4px 12px rgba(10,102,194,.28);
   display:flex; align-items:center; justify-content:center; }
 .logo svg{ width:24px; height:24px; }
 .brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
@@ -85,21 +85,21 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   width:18px; height:18px; color:var(--dim); pointer-events:none; }
 .field input{ width:100%; padding:13px 14px 13px 42px; border:1px solid var(--border);
   border-radius:12px; font-size:15px; color:var(--text); outline:none;
-  background:rgba(255,255,255,.045); transition:border-color .2s, box-shadow .2s, background .2s; }
+  background:rgba(0,0,0,.02); transition:border-color .2s, box-shadow .2s, background .2s; }
 .field input::placeholder{ color:rgba(154,161,184,.55); }
-.field input:focus{ border-color:var(--brand); background:rgba(255,255,255,.06);
-  box-shadow:0 0 0 4px rgba(99,102,241,.22); }
+.field input:focus{ border-color:var(--brand); background:rgba(0,0,0,.04);
+  box-shadow:0 0 0 4px rgba(10,102,194,.18); }
 .btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
   font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 10px 30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  box-shadow:0 4px 12px rgba(10,102,194,.25);
   transition:transform .15s, box-shadow .2s, filter .2s; }
 .btn:hover{ transform:translateY(-1px); filter:brightness(1.06);
   box-shadow:0 14px 36px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25); }
 .btn:active{ transform:translateY(0); }
 .msg{ font-size:13px; border-radius:12px; padding:11px 14px; margin-bottom:18px; line-height:1.5; }
 .msg.err{ background:rgba(244,63,94,.12); color:#fda4af; border:1px solid rgba(244,63,94,.25); }
-.msg.ok{ background:rgba(16,185,129,.12); color:#6ee7b7; border:1px solid rgba(16,185,129,.25); }
+.msg.ok{ background:rgba(16,185,129,.12); color:#059669; border:1px solid rgba(16,185,129,.25); }
 .foot{ display:flex; align-items:center; justify-content:center; gap:7px;
   margin-top:24px; font-size:12px; color:var(--dim); }
 .foot svg{ width:13px; height:13px; }
@@ -110,7 +110,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   <div class="card">
     <div class="brand">
       <div class="logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+        <svg viewBox="0 0 64 64" fill="none"><path d="M17 14h9v14h12V14h9v36h-9V36H26v14h-9z" fill="#ffffff"/><circle cx="52" cy="12" r="6" fill="#ffffff"/></svg>
       </div>
       <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
     </div>
@@ -153,14 +153,14 @@ CODE_PAGE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiPo Work · 输入验证码</title>
+<title>HiPo Work 认证</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
-  --bg:#0b0d17; --card:rgba(20,22,38,.86);
-  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.2);
-  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+  --brand:#0a66c2; --brand2:#084f9e; --accent:#0a66c2;
+  --bg:#f4f2ee; --card:#ffffff;
+  --border:rgba(0,0,0,.08); --border-hover:rgba(0,0,0,.18);
+  --text:#191919; --dim:#5f6775; --radius:20px;
 }
 html,body{height:100%;}
 body{
@@ -170,24 +170,24 @@ body{
 }
 body::before{ content:""; position:fixed; inset:0; z-index:0;
   background:
-    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
-    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
-    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+    radial-gradient(620px 420px at 12% 18%, rgba(10,102,194,.08), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(10,102,194,.05), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(10,102,194,.03), transparent 60%); }
 body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,0,0,.025) 1px,transparent 1px);
   background-size:46px 46px;
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
   mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
 .wrap{ position:relative; z-index:1; width:100%; max-width:404px; padding:24px; }
 .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
   padding:40px 36px 34px;
-  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.06);
   -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
 .brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
 .logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow:0 4px 12px rgba(10,102,194,.28);
   display:flex; align-items:center; justify-content:center; }
 .logo svg{ width:24px; height:24px; }
 .brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
@@ -196,7 +196,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .head h2{ font-size:22px; font-weight:700; letter-spacing:.2px; }
 .head .sent{ display:flex; align-items:center; gap:8px; margin-top:10px;
   font-size:13.5px; color:var(--dim); line-height:1.6; }
-.head .sent svg{ width:16px; height:16px; flex:none; color:#6ee7b7; }
+.head .sent svg{ width:16px; height:16px; flex:none; color:#059669; }
 .head .sent b{ color:var(--text); font-weight:600; word-break:break-all; }
 .otp{ position:relative; margin-bottom:22px; text-align:center; }
 .otp input{ width:100%; padding:16px; border:1px solid var(--border);
@@ -206,18 +206,18 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   transition:border-color .2s, box-shadow .2s, background .2s; font-variant-numeric:tabular-nums; }
 .otp input::placeholder{ color:rgba(154,161,184,.3); font-weight:400; letter-spacing:14px; text-indent:14px; }
 .otp input:focus{ border-color:var(--brand); background:rgba(255,255,255,.07);
-  box-shadow:0 0 0 4px rgba(99,102,241,.22); }
+  box-shadow:0 0 0 4px rgba(10,102,194,.18); }
 .btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
   font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 10px 30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  box-shadow:0 4px 12px rgba(10,102,194,.25);
   transition:transform .15s, box-shadow .2s, filter .2s; }
 .btn:hover{ transform:translateY(-1px); filter:brightness(1.06);
   box-shadow:0 14px 36px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25); }
 .btn:active{ transform:translateY(0); }
 .msg{ font-size:13px; border-radius:12px; padding:11px 14px; margin-bottom:18px; line-height:1.5; }
 .msg.err{ background:rgba(244,63,94,.12); color:#fda4af; border:1px solid rgba(244,63,94,.25); }
-.msg.ok{ background:rgba(16,185,129,.12); color:#6ee7b7; border:1px solid rgba(16,185,129,.25); }
+.msg.ok{ background:rgba(16,185,129,.12); color:#059669; border:1px solid rgba(16,185,129,.25); }
 .back{ display:flex; align-items:center; justify-content:center; gap:6px;
   margin-top:22px; font-size:13px; color:var(--dim); }
 .back a{ color:var(--brand); text-decoration:none; font-weight:600;
@@ -230,7 +230,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   <div class="card">
     <div class="brand">
       <div class="logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+        <svg viewBox="0 0 64 64" fill="none"><path d="M17 14h9v14h12V14h9v36h-9V36H26v14h-9z" fill="#ffffff"/><circle cx="52" cy="12" r="6" fill="#ffffff"/></svg>
       </div>
       <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
     </div>
@@ -271,14 +271,14 @@ ROLE_SELECT_PAGE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiPo Work · 选择身份</title>
+<title>HiPo Work 认证</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
-  --bg:#0b0d17; --card:rgba(20,22,38,.86);
-  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.22);
-  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+  --brand:#0a66c2; --brand2:#084f9e; --accent:#0a66c2;
+  --bg:#f4f2ee; --card:#ffffff;
+  --border:rgba(0,0,0,.08); --border-hover:rgba(0,0,0,.18);
+  --text:#191919; --dim:#5f6775; --radius:20px;
 }
 html,body{height:100%;}
 body{
@@ -288,24 +288,24 @@ body{
 }
 body::before{ content:""; position:fixed; inset:0; z-index:0;
   background:
-    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
-    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
-    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+    radial-gradient(620px 420px at 12% 18%, rgba(10,102,194,.08), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(10,102,194,.05), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(10,102,194,.03), transparent 60%); }
 body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,0,0,.025) 1px,transparent 1px);
   background-size:46px 46px;
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
   mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
 .wrap{ position:relative; z-index:1; width:100%; max-width:440px; padding:24px; }
 .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
   padding:38px 32px 30px;
-  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.06);
   -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
 .brand{ display:flex; align-items:center; gap:12px; margin-bottom:24px; }
 .logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow:0 4px 12px rgba(10,102,194,.28);
   display:flex; align-items:center; justify-content:center; }
 .logo svg{ width:24px; height:24px; }
 .brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
@@ -314,7 +314,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .head h2{ font-size:22px; font-weight:700; letter-spacing:.2px; }
 .head p{ font-size:13.5px; color:var(--dim); margin-top:8px; line-height:1.6; }
 .role{ display:block; width:100%; text-align:left; cursor:pointer;
-  background:rgba(255,255,255,.045); border:1px solid var(--border);
+  background:rgba(0,0,0,.02); border:1px solid var(--border);
   border-radius:16px; padding:20px 18px; margin-bottom:14px; color:var(--text);
   transition:border-color .2s, background .2s, transform .15s, box-shadow .2s; }
 .role:hover{ border-color:var(--brand); background:rgba(99,102,241,.09);
@@ -323,7 +323,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .role .row{ display:flex; align-items:center; gap:14px; }
 .role .ico{ width:46px; height:46px; border-radius:13px; flex:none;
   display:flex; align-items:center; justify-content:center;
-  background:rgba(99,102,241,.16); color:#a5b4fc; }
+  background:rgba(99,102,241,.16); color:#0a66c2; }
 .role.alt .ico{ background:rgba(34,211,238,.12); color:#67e8f9; }
 .role .ico svg{ width:24px; height:24px; }
 .role .txt{ flex:1; min-width:0; }
@@ -340,7 +340,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   <div class="card">
     <div class="brand">
       <div class="logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+        <svg viewBox="0 0 64 64" fill="none"><path d="M17 14h9v14h12V14h9v36h-9V36H26v14h-9z" fill="#ffffff"/><circle cx="52" cy="12" r="6" fill="#ffffff"/></svg>
       </div>
       <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
     </div>
@@ -410,14 +410,14 @@ CONSENT_PAGE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiPo Work · 授权确认</title>
+<title>HiPo Work 认证</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
-  --bg:#0b0d17; --card:rgba(20,22,38,.86);
-  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.2);
-  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+  --brand:#0a66c2; --brand2:#084f9e; --accent:#0a66c2;
+  --bg:#f4f2ee; --card:#ffffff;
+  --border:rgba(0,0,0,.08); --border-hover:rgba(0,0,0,.18);
+  --text:#191919; --dim:#5f6775; --radius:20px;
 }
 html,body{height:100%;}
 body{
@@ -427,24 +427,24 @@ body{
 }
 body::before{ content:""; position:fixed; inset:0; z-index:0;
   background:
-    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
-    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
-    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+    radial-gradient(620px 420px at 12% 18%, rgba(10,102,194,.08), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(10,102,194,.05), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(10,102,194,.03), transparent 60%); }
 body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,0,0,.025) 1px,transparent 1px);
   background-size:46px 46px;
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
   mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
 .wrap{ position:relative; z-index:1; width:100%; max-width:420px; padding:24px; }
 .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
   padding:40px 36px 34px;
-  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.06);
   -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
 .brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
 .logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow:0 4px 12px rgba(10,102,194,.28);
   display:flex; align-items:center; justify-content:center; }
 .logo svg{ width:24px; height:24px; }
 .brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
@@ -453,7 +453,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .head h2{ font-size:22px; font-weight:700; letter-spacing:.2px; }
 .head p{ font-size:13.5px; color:var(--dim); margin-top:8px; line-height:1.6; }
 .app{ display:flex; align-items:center; gap:14px; margin-bottom:20px;
-  background:rgba(255,255,255,.045); border:1px solid var(--border); border-radius:16px; padding:16px 18px; }
+  background:rgba(0,0,0,.02); border:1px solid var(--border); border-radius:16px; padding:16px 18px; }
 .app .ico{ width:42px; height:42px; border-radius:12px; flex:none;
   background:linear-gradient(135deg,var(--brand),var(--brand2)); opacity:.9;
   display:flex; align-items:center; justify-content:center; }
@@ -465,12 +465,12 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   letter-spacing:1px; margin-bottom:10px; }
 .scopes .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 12px;
   border:1px solid var(--border); border-radius:999px; font-size:12.5px; color:var(--text);
-  margin:0 6px 6px 0; background:rgba(255,255,255,.04); }
-.scopes .chip svg{ width:13px; height:13px; color:#6ee7b7; flex:none; }
+  margin:0 6px 6px 0; background:rgba(0,0,0,.03); }
+.scopes .chip svg{ width:13px; height:13px; color:#059669; flex:none; }
 .btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
   font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 10px 30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  box-shadow:0 4px 12px rgba(10,102,194,.25);
   transition:transform .15s, box-shadow .2s, filter .2s; }
 .btn:hover{ transform:translateY(-1px); filter:brightness(1.06);
   box-shadow:0 14px 36px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25); }
@@ -485,7 +485,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   <div class="card">
     <div class="brand">
       <div class="logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+        <svg viewBox="0 0 64 64" fill="none"><path d="M17 14h9v14h12V14h9v36h-9V36H26v14h-9z" fill="#ffffff"/><circle cx="52" cy="12" r="6" fill="#ffffff"/></svg>
       </div>
       <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
     </div>
@@ -530,14 +530,14 @@ DONE_PAGE_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HiPo Work · 准备就绪</title>
+<title>HiPo Work 认证</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --brand:#6366f1; --brand2:#8b5cf6; --accent:#22d3ee;
-  --bg:#0b0d17; --card:rgba(20,22,38,.86);
-  --border:rgba(255,255,255,.09); --border-hover:rgba(255,255,255,.22);
-  --text:#e8eaf2; --dim:#9aa1b8; --radius:20px;
+  --brand:#0a66c2; --brand2:#084f9e; --accent:#0a66c2;
+  --bg:#f4f2ee; --card:#ffffff;
+  --border:rgba(0,0,0,.08); --border-hover:rgba(0,0,0,.18);
+  --text:#191919; --dim:#5f6775; --radius:20px;
 }
 html,body{height:100%;}
 body{
@@ -547,24 +547,24 @@ body{
 }
 body::before{ content:""; position:fixed; inset:0; z-index:0;
   background:
-    radial-gradient(620px 420px at 12% 18%, rgba(99,102,241,.26), transparent 62%),
-    radial-gradient(720px 520px at 88% 82%, rgba(139,92,246,.20), transparent 62%),
-    radial-gradient(480px 380px at 72% 8%, rgba(34,211,238,.10), transparent 60%); }
+    radial-gradient(620px 420px at 12% 18%, rgba(10,102,194,.08), transparent 62%),
+    radial-gradient(720px 520px at 88% 82%, rgba(10,102,194,.05), transparent 62%),
+    radial-gradient(480px 380px at 72% 8%, rgba(10,102,194,.03), transparent 60%); }
 body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
-                   linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,0,0,.025) 1px,transparent 1px);
   background-size:46px 46px;
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
   mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
 .wrap{ position:relative; z-index:1; width:100%; max-width:440px; padding:24px; }
 .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
   padding:38px 34px 30px;
-  box-shadow:0 28px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.06);
   -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
 .brand{ display:flex; align-items:center; gap:12px; margin-bottom:24px; }
 .logo{ width:44px; height:44px; border-radius:13px; flex:none; position:relative;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 8px 24px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.3);
+  box-shadow:0 4px 12px rgba(10,102,194,.28);
   display:flex; align-items:center; justify-content:center; }
 .logo svg{ width:24px; height:24px; }
 .brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
@@ -582,7 +582,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .guide{ margin-bottom:24px; }
 .guide .t{ font-size:13px; font-weight:700; color:var(--dim); text-transform:uppercase;
   letter-spacing:1.2px; margin-bottom:14px; }
-.guide .p{ font-size:15px; font-weight:700; margin-bottom:16px; color:#a5b4fc; }
+.guide .p{ font-size:15px; font-weight:700; margin-bottom:16px; color:#0a66c2; }
 .guide ul{ list-style:none; }
 .guide li{ display:flex; align-items:center; gap:10px; padding:9px 0;
   font-size:13.5px; color:var(--text); line-height:1.5; }
@@ -591,7 +591,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
   font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
-  box-shadow:0 10px 30px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.22);
+  box-shadow:0 4px 12px rgba(10,102,194,.25);
   transition:transform .15s, box-shadow .2s, filter .2s; }
 .btn:hover{ transform:translateY(-1px); filter:brightness(1.06);
   box-shadow:0 14px 36px rgba(99,102,241,.45), inset 0 1px 0 rgba(255,255,255,.25); }
@@ -604,7 +604,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   <div class="card">
     <div class="brand">
       <div class="logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+        <svg viewBox="0 0 64 64" fill="none"><path d="M17 14h9v14h12V14h9v36h-9V36H26v14h-9z" fill="#ffffff"/><circle cx="52" cy="12" r="6" fill="#ffffff"/></svg>
       </div>
       <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
     </div>
@@ -691,7 +691,7 @@ def _role_guide(role: str) -> dict:
             "role_summary": "授权完成后，切回 Agent 发送任务指令：",
             "guide_items": (
                 '<li><span class="dot"></span><span><strong>推荐指令：</strong>复制并发送给 Agent：</span></li>'
-                '<li style="margin-top:4px;"><pre style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 10px; font-size:12px; color:#e0e7ff; white-space:pre-wrap; font-family:monospace; user-select:all;">使用 HiPo Work 工具，帮我搜索具备 3 年以上经验并熟悉相关技能的候选人，展示评分明细</pre></li>'
+                '<li style="margin-top:4px;"><pre style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:12px; color:#334155; white-space:pre-wrap; font-family:monospace; user-select:all;">使用 HiPo Work 工具，帮我搜索具备 3 年以上经验并熟悉相关技能的候选人，展示评分明细</pre></li>'
                 '<li style="margin-top:8px;"><span class="dot"></span><span>点下方按钮完成授权，Agent 将自动收到凭据并开始工作</span></li>'
             ),
         }
@@ -700,7 +700,7 @@ def _role_guide(role: str) -> dict:
         "role_summary": "授权完成后，切回 Agent 发送任务指令：",
         "guide_items": (
             '<li><span class="dot"></span><span><strong>推荐指令：</strong>复制并发送给 Agent：</span></li>'
-            '<li style="margin-top:4px;"><pre style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 10px; font-size:12px; color:#e0e7ff; white-space:pre-wrap; font-family:monospace; user-select:all;">请读取我的本地简历，把工作经历、项目经历和技能导入到 HiPo Work 并上传原件附件，完成后匹配岗位</pre></li>'
+            '<li style="margin-top:4px;"><pre style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:12px; color:#334155; white-space:pre-wrap; font-family:monospace; user-select:all;">请读取我的本地简历，把工作经历、项目经历和技能导入到 HiPo Work 并上传原件附件，完成后匹配岗位</pre></li>'
             '<li style="margin-top:8px;"><span class="dot"></span><span>点下方按钮完成授权，Agent 将自动收到凭据并开始工作</span></li>'
         ),
     }
