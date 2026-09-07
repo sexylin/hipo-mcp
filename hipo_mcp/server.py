@@ -338,7 +338,13 @@ def market_analysis(ctx: Context, keyword: str = None, industry: str = None, loc
 
 @mcp.tool(
     name="import_resume",
-    description="导入简历（需要 candidate 角色）。Agent 自行解析简历，完整传入工作经历、项目经历、教育经历、技能等结构化数据。项目经历可选。可选携带原始简历附件（文件名 + base64 内容），随导入一并存档到对象存储供 HR 查看。",
+    description=(
+        "导入或更新求职者简历（需要 candidate 角色）。Agent 自行解析简历，完整传入结构化数据。\n"
+        "【项目经历提取规则】如果简历或工作经历中包含独立作品、App/小程序、开源项目、商业落地专项等，"
+        "请务必提炼并结构化传入 projects 字段（包含 name, role, start_date, end_date, description, responsibilities, achievements, tech_stack 等），切勿让 projects 为空！\n"
+        "【附件上传规则】如果用户是从本地文件（PDF、Word docx/doc、图片等）导入，必须读取该文件的二进制内容并转为 Base64 字符串，"
+        "通过 resume_file_name、resume_file_type 和 resume_file_base64 传入，供 HR 查看和下载原始附件。切勿遗漏！"
+    ),
 )
 def import_resume(
     ctx: Context,
@@ -353,7 +359,7 @@ def import_resume(
     resume_file_type: Optional[str] = None,
     resume_file_base64: Optional[str] = None,
 ) -> str:
-    """导入简历（可选携带原始附件 base64，存档到对象存储）"""
+    """导入简历（含结构化工作/项目经历，以及原始附件 base64）"""
     err = _require_role(ctx, "candidate")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
 
@@ -382,6 +388,36 @@ def import_resume(
         payload["resume_file_type"] = resume_file_type or ""
         payload["resume_file_base64"] = resume_file_base64
     result = _post(ctx, "/agent/import-resume", payload)
+    return json.dumps(result, ensure_ascii=False)
+
+
+@mcp.tool(
+    name="upload_resume_attachment",
+    description=(
+        "单独为当前求职者上传或补充原始简历附件文件（需要 candidate 角色）。\n"
+        "当 import_resume 导入时未携带附件，或者用户需要单独更新/补交简历原件（PDF、DOCX、DOC、PNG、JPG）时调用本工具。\n"
+        "读取本地文件内容转为 Base64 编码，并传入 file_name 和 file_base64。"
+    ),
+)
+def upload_resume_attachment(
+    ctx: Context,
+    file_name: str,
+    file_base64: str,
+    file_type: Optional[str] = None,
+) -> str:
+    """单独上传简历附件文件（Base64）到对象存储"""
+    err = _require_role(ctx, "candidate")
+    if err: return json.dumps({"error": err}, ensure_ascii=False)
+
+    if not file_name or not file_base64:
+        return json.dumps({"error": "file_name 和 file_base64 不能为空"}, ensure_ascii=False)
+
+    payload = {
+        "file_name": file_name,
+        "file_base64": file_base64,
+        "file_type": file_type or "",
+    }
+    result = _post(ctx, "/agent/upload-resume-attachment", payload)
     return json.dumps(result, ensure_ascii=False)
 
 
