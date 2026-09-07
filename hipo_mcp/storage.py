@@ -218,9 +218,17 @@ class RedisDict(MutableMapping[str, Any]):
 
     def __iter__(self) -> Iterator[str]:
         try:
-            return iter(self._store._client.smembers(self._keys_key))
+            members = self._store._client.smembers(self._keys_key)
+            decoded = [m.decode("utf-8") if isinstance(m, (bytes, bytearray)) else str(m) for m in members]
+            return iter(decoded)
         except Exception:  # noqa: BLE001
             return iter(())
+
+    def __contains__(self, k: object) -> bool:
+        """支持高效直接判断 key 是否存在，避免遍历全量集合或类型不匹配。"""
+        if not isinstance(k, str):
+            k = str(k)
+        return self._store.get(self._key(k)) is not None
 
     def __len__(self) -> int:
         try:

@@ -786,6 +786,27 @@ def login_page_route(provider):
             role = "candidate"
 
         client = await provider.get_client(client_id) if client_id else None
+        # 容错机制：如果客户端传了合法 client_id (UUID格式) 且是本地 127.0.0.1 回调，
+        # 但服务端内存/Redis 因重启或网络波动暂时未查到该 client，自动为其恢复注册，避免阻断授权。
+        if not client and client_id and redirect_uri and isinstance(redirect_uri, str) and ("127.0.0.1" in redirect_uri or "localhost" in redirect_uri):
+            try:
+                import uuid
+                uuid.UUID(str(client_id))
+                from mcp.shared.auth import OAuthClientInformationFull
+                from pydantic import AnyUrl
+                recovered_client = OAuthClientInformationFull(
+                    client_id=str(client_id),
+                    client_name="hipo-agent-client",
+                    redirect_uris=[AnyUrl(str(redirect_uri))],
+                    token_endpoint_auth_method="none",
+                    grant_types=["authorization_code", "refresh_token"],
+                    response_types=["code"],
+                    scope=str(scope or "profile candidate:read candidate:write employer:read employer:write"),
+                )
+                await provider.register_client(recovered_client)
+                client = recovered_client
+            except Exception:
+                pass
         if (
             not client
             or not state
