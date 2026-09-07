@@ -684,22 +684,24 @@ def _done_page(**kwargs) -> HTMLResponse:
 
 
 def _role_guide(role: str) -> dict:
-    """按角色组装授权完成页的引导文案（简单直接，2 条步骤）。"""
+    """按角色组装授权完成页的引导文案与可直接发给 Agent 的开箱 Prompt。"""
     if role == "employer":
         return {
             "role_name": "招聘方",
-            "role_summary": "让 AI 帮你发布岗位、匹配候选人",
+            "role_summary": "授权完成后，切回 Agent 发送任务指令：",
             "guide_items": (
-                '<li><span class="dot"></span><span>让 Agent 发布岗位、匹配合适的候选人</span></li>'
-                '<li><span class="dot"></span><span>回到客户端，向 Agent 下达任务即可开始</span></li>'
+                '<li><span class="dot"></span><span><strong>推荐指令：</strong>复制并发送给 Agent：</span></li>'
+                '<li style="margin-top:4px;"><pre style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 10px; font-size:12px; color:#e0e7ff; white-space:pre-wrap; font-family:monospace; user-select:all;">使用 HiPo Work 工具，帮我搜索具备 3 年以上经验并熟悉相关技能的候选人，展示评分明细</pre></li>'
+                '<li style="margin-top:8px;"><span class="dot"></span><span>点下方按钮完成授权，Agent 将自动收到凭据并开始工作</span></li>'
             ),
         }
     return {
         "role_name": "求职者",
-        "role_summary": "让 AI 帮你导入简历、管理求职档案",
+        "role_summary": "授权完成后，切回 Agent 发送任务指令：",
         "guide_items": (
-            '<li><span class="dot"></span><span>把简历发给 Agent，让它帮你导入求职档案</span></li>'
-            '<li><span class="dot"></span><span>回到客户端，向 Agent 下达任务即可开始</span></li>'
+            '<li><span class="dot"></span><span><strong>推荐指令：</strong>复制并发送给 Agent：</span></li>'
+            '<li style="margin-top:4px;"><pre style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 10px; font-size:12px; color:#e0e7ff; white-space:pre-wrap; font-family:monospace; user-select:all;">请读取我的本地简历，把工作经历、项目经历和技能导入到 HiPo Work 并上传原件附件，完成后匹配岗位</pre></li>'
+            '<li style="margin-top:8px;"><span class="dot"></span><span>点下方按钮完成授权，Agent 将自动收到凭据并开始工作</span></li>'
         ),
     }
 
