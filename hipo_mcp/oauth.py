@@ -80,10 +80,15 @@ class HiPoOAuthProvider(OAuthProvider):
 
     def store_pending_auth(self, state: str, user_info: dict) -> None:
         pending = self._pending_auth.get(state)
-        if not pending or pending.get("_ts", 0) + AUTH_CODE_EXPIRY < time.time():
+        if not pending:
+            # 容错：如果 pending 不存在（例如由 consent 一键跳入未走常规 login 表单），创建基础结构
+            pending = {"_ts": time.time(), "transaction": {}}
+        elif pending.get("_ts", 0) + AUTH_CODE_EXPIRY < time.time():
             return
         pending.update(user_info)
         pending["_ts"] = time.time()
+        # 必须显式写回，保证在 RedisDict 模式下序列化并持久化到 Redis！
+        self._pending_auth[state] = pending
 
     def get_pending_auth(self, state: str) -> dict:
         info = self._pending_auth.pop(state, {})

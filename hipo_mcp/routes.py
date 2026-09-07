@@ -1044,6 +1044,23 @@ def authorize_route(provider):
                 "role": session_role,
                 "scopes": str(scope).split() if scope else ["profile"],
             })
+            # 双重保险：确保事务上下文完备
+            tx = provider.get_pending_transaction(state)
+            if not tx:
+                provider.store_pending_transaction(state, {
+                    "client_id": client_id,
+                    "redirect_uri": redirect_uri,
+                    "state": state,
+                    "scope": scope,
+                    "code_challenge": code_challenge,
+                    "code_challenge_method": code_challenge_method,
+                    "resource": resource or "",
+                })
+                provider.store_pending_auth(state, {
+                    "user_id": user_id,
+                    "role": session_role,
+                    "scopes": str(scope).split() if scope else ["profile"],
+                })
             return await _finalize_authorize(
                 provider, client, state, redirect_uri, scope, resource, code_challenge
             )
