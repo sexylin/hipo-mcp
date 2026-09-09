@@ -120,7 +120,7 @@ HiPo Work 采用安全的 **OAuth 2.0 授权码流程（PKCE S256）**，无需�
 
 | 工具名 | 说明 |
 |--------|------|
-| `publish_job` | 发布招聘需求，支持技能要求、经验年限、工作地点、薪资待遇等结构化条件 |
+| `publish_job` | 发布招聘需求，支持技能要求、经验年限、地点、薪资（支持 `salary_currency`: CNY/USDT/USD/EUR/GBP/AUD/SGD）等结构化条件 |
 | `close_job` | 关闭已发布的招聘需求，停止候选人匹配与投递 |
 | `match_candidates` | 根据自定义条件（required/preferred）匹配全平台公开候选人，输出多维度评分 |
 | `match_job_requirement` | 传入已发布的 `job_id`，自动触发多维度语义与硬性匹配 |
@@ -143,7 +143,7 @@ HiPo Work 采用安全的 **OAuth 2.0 授权码流程（PKCE S256）**，无需�
 > “请读取我本地的简历 `/path/to/my_resume.pdf`，提取我的工作经历、独立项目经历、技能与教育背景，调用 HiPo Work 的 `import_resume` 工具导入到平台，并附带上传原始附件。导入成功后帮我查询最匹配的岗位。”
 
 ### 招聘方示例：发布岗位并自动寻找匹配人才
-> “帮我发布一个在成都的 Senior Python 后端研发岗位，要求3年以上经验，熟悉 FastAPI 与 PostgreSQL，月薪 20k-35k。发布后立即执行自动匹配，列出前 3 位最合适的候选人并分析匹配优势。”
+> “帮我发布一个在成都的 Senior Python 后端研发岗位，要求3年以上经验，熟悉 FastAPI 与 PostgreSQL，月薪 20k-35k（币种支持 CNY/USDT/USD/EUR/GBP/AUD/SGD）。发布后立即执行自动匹配，列出前 3 位最合适的候选人并分析匹配优势。”
 
 ---
 
