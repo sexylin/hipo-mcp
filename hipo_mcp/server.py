@@ -226,6 +226,48 @@ def register_or_login(email: str, code: str, role: str = "candidate") -> str:
 
 
 @mcp.tool(
+    name="create_company",
+    description="创建公司信息（需要 employer 角色）。输入公司名称 company_name 和简介 description，可指定是否设为默认企业 is_default。",
+)
+def create_company(
+    ctx: Context,
+    company_name: str,
+    description: str = "",
+    is_default: bool = False,
+) -> str:
+    err = _require_role(ctx, "employer", "write")
+    if err: return json.dumps({"error": err}, ensure_ascii=False)
+    result = _post(ctx, "/agent/create-company", {
+        "company_name": company_name,
+        "description": description or "",
+        "is_default": bool(is_default),
+    })
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool(
+    name="set_default_company",
+    description="指定默认公司/企业主体（需要 employer 角色）。输入企业主体 ID company_id。",
+)
+def set_default_company(ctx: Context, company_id: str) -> str:
+    err = _require_role(ctx, "employer", "write")
+    if err: return json.dumps({"error": err}, ensure_ascii=False)
+    result = _post(ctx, "/agent/set-default-company", {"company_id": company_id})
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool(
+    name="list_companies",
+    description="查询当前招聘方名下的所有公司/企业主体列表及默认企业（需要 employer 角色）。",
+)
+def list_companies(ctx: Context) -> str:
+    err = _require_role(ctx, "employer", "read")
+    if err: return json.dumps({"error": err}, ensure_ascii=False)
+    result = _get(ctx, "/agent/list-companies")
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+@mcp.tool(
     name="publish_job",
     description="发布招聘岗位（需要 employer 角色）。支持结构化条件 required/preferred。支持币种选择(salary_currency: CNY/USDT/USD/EUR/GBP/AUD/SGD，默认CNY)。薪资面议时两个 salary 字段都不传即可。",
 )

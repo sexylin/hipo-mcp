@@ -120,6 +120,9 @@ HiPo Work 采用安全的 **OAuth 2.0 授权码流程（PKCE S256）**，无需�
 
 | 工具名 | 说明 |
 |--------|------|
+| `create_company` | 创建公司信息（输入公司名、公司简介，可指定是否设为默认企业） |
+| `set_default_company` | 将指定企业主体设为默认公司 |
+| `list_companies` | 查询当前招聘方名下的所有企业主体列表及默认企业 |
 | `publish_job` | 发布招聘需求，支持技能要求、经验年限、地点、薪资（支持 `salary_currency`: CNY/USDT/USD/EUR/GBP/AUD/SGD）等结构化条件 |
 | `close_job` | 关闭已发布的招聘需求，停止候选人匹配与投递 |
 | `match_candidates` | 根据自定义条件（required/preferred）匹配全平台公开候选人，输出多维度评分 |
