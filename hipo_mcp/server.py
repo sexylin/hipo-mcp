@@ -227,7 +227,7 @@ def register_or_login(email: str, code: str, role: str = "candidate") -> str:
 
 @mcp.tool(
     name="publish_job",
-    description="发布招聘岗位（需要 employer 角色）。支持结构化条件 required/preferred。薪资面议时两个 salary 字段都不传即可。",
+    description="发布招聘岗位（需要 employer 角色）。支持结构化条件 required/preferred。支持币种选择(salary_currency: CNY/USDT/USD/EUR/GBP/AUD/SGD，默认CNY)。薪资面议时两个 salary 字段都不传即可。",
 )
 def publish_job(
     ctx: Context,
@@ -238,6 +238,7 @@ def publish_job(
     salary_min: int = None,
     salary_max: int = None,
     salary_unit: str = "monthly",
+    salary_currency: str = "CNY",
 ) -> str:
     err = _require_role(ctx, "employer", "write")
     if err: return json.dumps({"error": err}, ensure_ascii=False)
@@ -249,6 +250,7 @@ def publish_job(
         "title": title, "raw_text": raw_text or "",
         "required": required, "preferred": preferred or {},
         "salary_min": salary_min, "salary_max": salary_max, "salary_unit": salary_unit,
+        "salary_currency": salary_currency or "CNY",
     })
     return json.dumps({"job_id": result.get("job_id"), "title": result.get("title"), "location": result.get("location")}, ensure_ascii=False)
 
