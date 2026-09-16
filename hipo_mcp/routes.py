@@ -119,6 +119,17 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <p>通过邮箱验证码登录，安全连接 MCP 服务，让你的 Agent 替你处理招聘与求职。</p>
     </div>
     {message}
+    <div class="app">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div>
+      <div>
+        <div class="nm">{client_name}</div>
+        <div class="em">正在请求访问你的 HiPo Work 账号</div>
+      </div>
+    </div>
+    <div class="scopes">
+      <div class="t">该应用将能够</div>
+      {scope_chips}
+    </div>
     <form method="POST" action="/authorize">
       <input type="hidden" name="client_id" value="{client_id}">
       <input type="hidden" name="redirect_uri" value="{redirect_uri}">
@@ -133,14 +144,29 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
         <label for="email">邮箱地址</label>
         <div class="in-wrap">
           <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M2 7l10 6 10-6"/></svg>
-          <input id="email" type="email" name="email" placeholder="you@example.com" value="{email}" autocomplete="email" required>
+          <input id="email" type="email" name="email" placeholder="请输入邮箱地址" value="{email}" autocomplete="email" required>
         </div>
       </div>
+      <div class="notice">点击获取验证码后，我们会向该邮箱发送 6 位验证码，有效期 10 分钟。若未收到，请检查垃圾邮件或稍后在下方重新获取。</div>
       <button type="submit" class="btn">获取验证码</button>
     </form>
-    <div class="foot">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-      通过邮箱验证码安全连接
+    <form method="POST" action="/authorize">
+      <input type="hidden" name="client_id" value="{client_id}">
+      <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="state" value="{state}">
+      <input type="hidden" name="scope" value="{scope}">
+      <input type="hidden" name="resource" value="{resource}">
+      <input type="hidden" name="code_challenge" value="{code_challenge}">
+      <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+      <input type="hidden" name="step" value="deny">
+      <button type="submit" class="btn ghost">拒绝授权</button>
+    </form>
+    <div class="legal">
+      <a href="https://hipowork.com/privacy" target="_blank" rel="noopener">隐私政策</a>
+      ·
+      <a href="https://hipowork.com/terms" target="_blank" rel="noopener">用户协议</a>
+      <div style="margin-top:6px;">HiPo Work 不会向该应用提供你的邮箱验证码</div>
     </div>
   </div>
 </div>
@@ -467,6 +493,14 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   border:1px solid var(--border); border-radius:999px; font-size:12.5px; color:var(--text);
   margin:0 6px 6px 0; background:rgba(0,0,0,.03); }
 .scopes .chip svg{ width:13px; height:13px; color:#059669; flex:none; }
+.btn.ghost{ background:transparent; color:var(--dim); border:1px solid var(--border);
+  box-shadow:none; margin-top:10px; font-weight:600; }
+.btn.ghost:hover{ transform:none; background:rgba(0,0,0,.03); filter:none; box-shadow:none; }
+.legal{ margin-top:18px; text-align:center; font-size:12px; color:var(--dim); line-height:1.7; }
+.legal a{ color:var(--brand); text-decoration:none; }
+.legal a:hover{ text-decoration:underline; }
+.notice{ margin-top:16px; padding:12px 14px; border-radius:12px; font-size:12px; line-height:1.6;
+  background:rgba(10,102,194,.06); border:1px solid rgba(10,102,194,.16); color:#0b4c8c; }
 .btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
   font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
   background:linear-gradient(135deg,var(--brand),var(--brand2));
@@ -498,13 +532,14 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div>
       <div>
         <div class="nm">{client_name}</div>
-        <div class="em">{role_name}</div>
+        <div class="em">申请访问你的 HiPo Work 账号 · 当前身份：{role_name}</div>
       </div>
     </div>
     <div class="scopes">
-      <div class="t">请求的权限</div>
+      <div class="t">该应用将能够</div>
       {scope_chips}
     </div>
+    <div class="notice">授权后，该应用即可按上述权限读写你的账号数据。你随时可以在个人中心或重新授权时撤销；撤销后其已获取的令牌将立即失效。</div>
     <form method="POST" action="/authorize">
       <input type="hidden" name="client_id" value="{client_id}">
       <input type="hidden" name="redirect_uri" value="{redirect_uri}">
@@ -517,7 +552,24 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <input type="hidden" name="step" value="consent">
       <button type="submit" class="btn">同意并授权</button>
     </form>
-    <div class="foot">授权后你的 Agent 即可通过 MCP 替你处理招聘与求职事务</div>
+    <form method="POST" action="/authorize">
+      <input type="hidden" name="client_id" value="{client_id}">
+      <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+      <input type="hidden" name="response_type" value="code">
+      <input type="hidden" name="state" value="{state}">
+      <input type="hidden" name="scope" value="{scope}">
+      <input type="hidden" name="resource" value="{resource}">
+      <input type="hidden" name="code_challenge" value="{code_challenge}">
+      <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+      <input type="hidden" name="step" value="deny">
+      <button type="submit" class="btn ghost">拒绝授权</button>
+    </form>
+    <div class="legal">
+      <a href="https://hipowork.com/privacy" target="_blank" rel="noopener">隐私政策</a>
+      ·
+      <a href="https://hipowork.com/terms" target="_blank" rel="noopener">用户协议</a>
+      <div style="margin-top:6px;">HiPo Work 不会向该应用提供你的邮箱验证码</div>
+    </div>
   </div>
 </div>
 </body>
@@ -645,7 +697,12 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 
 
 def _login_page(**kwargs) -> HTMLResponse:
-    return _render_page(LOGIN_PAGE_HTML, kwargs)
+    """登录页：同样展示申请方与权限清单，保证「知情同意」。"""
+    scope = str(kwargs.get("scope") or "profile")
+    kwargs["scope_chips"] = _build_scope_chips(scope)
+    if not kwargs.get("client_name"):
+        kwargs["client_name"] = "AI 助手（MCP 客户端）"
+    return _render_page(LOGIN_PAGE_HTML, kwargs, raw_keys=frozenset({"scope_chips"}))
 
 
 def _code_page(**kwargs) -> HTMLResponse:
@@ -656,25 +713,32 @@ def _role_select_page(**kwargs) -> HTMLResponse:
     return _render_page(ROLE_SELECT_PAGE_HTML, kwargs)
 
 
-def _consent_page(**kwargs) -> HTMLResponse:
-    """已登录会话下的一键授权页（方案A：跳过邮箱验证码）。"""
-    scope = str(kwargs.get("scope") or "profile")
-    scope_labels = {
-        "profile": "读取账号基本信息",
-        "candidate:read": "查看求职档案",
-        "candidate:write": "更新求职档案",
-        "employer:read": "查看招聘信息",
-        "employer:write": "发布/管理岗位与候选人",
-    }
+SCOPE_LABELS = {
+    "profile": "读取账号基本信息",
+    "candidate:read": "查看你的求职档案",
+    "candidate:write": "更新你的求职档案（简历、技能、项目）",
+    "employer:read": "查看招聘信息",
+    "employer:write": "发布与管理岗位、查看候选人",
+}
+
+
+def _build_scope_chips(scope: str) -> str:
+    """把 OAuth scope 翻译成用户能看懂的中文权限清单。"""
     chips = []
-    for s in scope.split():
-        label = scope_labels.get(s, s)
+    for s in (scope or "profile").split():
+        label = SCOPE_LABELS.get(s, s)
         chips.append(
             f'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
             f'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'
             f'{label}</span>'
         )
-    kwargs["scope_chips"] = "".join(chips) or '<span class="chip">profile</span>'
+    return "".join(chips) or '<span class="chip">读取账号基本信息</span>'
+
+
+def _consent_page(**kwargs) -> HTMLResponse:
+    """已登录会话下的一键授权页（方案A：跳过邮箱验证码）。"""
+    scope = str(kwargs.get("scope") or "profile")
+    kwargs["scope_chips"] = _build_scope_chips(scope)
     kwargs["role_name"] = "求职者" if kwargs.get("role") == "candidate" else "招聘方"
     return _render_page(CONSENT_PAGE_HTML, kwargs, raw_keys=frozenset({"scope_chips"}))
 
@@ -879,6 +943,7 @@ def login_page_route(provider):
             role=role,
             message="",
             resource=params.get("resource", ""),
+            client_name=getattr(client, "client_name", "") or "AI 助手（MCP 客户端）",
         )
 
     return handler
@@ -951,6 +1016,18 @@ def authorize_route(provider):
             "email": email,
             "role": role,
         }
+
+        if step == "deny":
+            # 用户明确拒绝授权：按 RFC 6749 以 error=access_denied 回调，
+            # 保证用户有路可退，而不是只能关闭标签页。
+            from urllib.parse import urlencode as _urlencode
+
+            _redirect = str(redirect_uri or "")
+            deny_params = {"error": "access_denied", "error_description": "The user denied the authorization request"}
+            if state:
+                deny_params["state"] = str(state)
+            sep = "&" if "?" in _redirect else "?"
+            return RedirectResponse(f"{_redirect}{sep}{_urlencode(deny_params)}", status_code=302)
 
         if step == "send_code":
             # MCP 层限流：防止批量轰炸验证码发送接口（持久化存储，见 _rate_limit_hit）。
