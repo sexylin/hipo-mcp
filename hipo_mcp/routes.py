@@ -62,7 +62,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   background-size:46px 46px;
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
   mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
-.wrap{ position:relative; z-index:1; width:100%; max-width:404px; padding:24px; }
+.wrap{ position:relative; z-index:1; width:100%; max-width:404px; padding:24px; margin:0 auto; }
 .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
   padding:40px 36px 34px;
   box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.06);
@@ -103,6 +103,21 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .foot{ display:flex; align-items:center; justify-content:center; gap:7px;
   margin-top:24px; font-size:12px; color:var(--dim); }
 .foot svg{ width:13px; height:13px; }
+.scopes{ margin-bottom:16px; text-align:left; }
+.scopes .t{ font-size:12px; font-weight:700; color:var(--dim); text-transform:uppercase;
+  letter-spacing:1px; margin-bottom:10px; }
+.scopes .chip{ display:inline-flex; align-items:center; gap:5px; padding:5px 11px;
+  border:1px solid var(--border); border-radius:999px; font-size:12.5px; line-height:1.4;
+  color:var(--text); margin:0 6px 6px 0; background:rgba(0,0,0,.03); vertical-align:middle; }
+.scopes .chip svg{ display:block; width:12px !important; height:12px !important; min-width:12px; max-width:12px; color:#059669; flex:none; }
+.btn.ghost{ background:transparent; color:var(--dim); border:1px solid var(--border);
+  box-shadow:none; margin-top:10px; font-weight:600; }
+.btn.ghost:hover{ transform:none; background:rgba(0,0,0,.03); filter:none; box-shadow:none; }
+.legal{ margin-top:18px; text-align:center; font-size:12px; color:var(--dim); line-height:1.7; }
+.legal a{ color:var(--brand); text-decoration:none; }
+.legal a:hover{ text-decoration:underline; }
+.notice{ margin-top:12px; padding:12px 14px; border-radius:12px; font-size:12px; line-height:1.6;
+  background:rgba(10,102,194,.06); border:1px solid rgba(10,102,194,.16); color:#0b4c8c; text-align:left; }
 </style>
 </head>
 <body>
@@ -462,9 +477,9 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   background-size:46px 46px;
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
   mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
-.wrap{ position:relative; z-index:1; width:100%; max-width:420px; padding:24px; }
+.wrap{ position:relative; z-index:1; width:100%; max-width:420px; padding:24px; margin:0 auto; }
 .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
-  padding:40px 36px 34px;
+  padding:30px 30px 26px;
   box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.06);
   -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
 .brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
@@ -475,7 +490,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .logo svg{ width:24px; height:24px; }
 .brand h1{ font-size:20px; font-weight:700; letter-spacing:.2px; }
 .brand p{ font-size:13px; color:var(--dim); margin-top:2px; }
-.head{ margin-bottom:22px; }
+.head{ margin-bottom:16px; }
 .head h2{ font-size:22px; font-weight:700; letter-spacing:.2px; }
 .head p{ font-size:13.5px; color:var(--dim); margin-top:8px; line-height:1.6; }
 .app{ display:flex; align-items:center; gap:14px; margin-bottom:20px;
@@ -486,20 +501,36 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .app .ico svg{ width:22px; height:22px; }
 .app .nm{ font-size:15px; font-weight:700; }
 .app .em{ font-size:12.5px; color:var(--dim); margin-top:2px; word-break:break-all; }
-.scopes{ margin-bottom:22px; }
+.scopes{ margin-bottom:16px; }
 .scopes .t{ font-size:12px; font-weight:700; color:var(--dim); text-transform:uppercase;
   letter-spacing:1px; margin-bottom:10px; }
-.scopes .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 12px;
-  border:1px solid var(--border); border-radius:999px; font-size:12.5px; color:var(--text);
-  margin:0 6px 6px 0; background:rgba(0,0,0,.03); }
-.scopes .chip svg{ width:13px; height:13px; color:#059669; flex:none; }
+.scopes .chip{ display:inline-flex; align-items:center; gap:5px; padding:5px 11px;
+  border:1px solid var(--border); border-radius:999px; font-size:12.5px; line-height:1.4;
+  color:var(--text); margin:0 6px 6px 0; background:rgba(0,0,0,.03); vertical-align:middle; }
+.scopes .chip svg{ display:block; width:12px; height:12px; color:#059669; flex:none; }
 .btn.ghost{ background:transparent; color:var(--dim); border:1px solid var(--border);
   box-shadow:none; margin-top:10px; font-weight:600; }
 .btn.ghost:hover{ transform:none; background:rgba(0,0,0,.03); filter:none; box-shadow:none; }
 .legal{ margin-top:18px; text-align:center; font-size:12px; color:var(--dim); line-height:1.7; }
 .legal a{ color:var(--brand); text-decoration:none; }
 .legal a:hover{ text-decoration:underline; }
-.notice{ margin-top:16px; padding:12px 14px; border-radius:12px; font-size:12px; line-height:1.6;
+.notice{ margin-top:12px; padding:12px 14px; border-radius:12px; font-size:12px; line-height:1.6;
+  background:rgba(10,102,194,.06); border:1px solid rgba(10,102,194,.16); color:#0b4c8c; }
+.field{ margin-bottom:18px; }
+.scopes .t{ font-size:12px; font-weight:700; color:var(--dim); text-transform:uppercase;
+  letter-spacing:1px; margin-bottom:10px; }
+.scopes .chip{ display:inline-flex; align-items:center; gap:5px; padding:5px 11px;
+  border:1px solid var(--border); border-radius:999px; font-size:12.5px; line-height:1.4;
+  color:var(--text); margin:0 6px 6px 0; background:rgba(0,0,0,.03); vertical-align:middle; }
+/* display:block + 固定尺寸，避免 inline svg 的基线空隙撑高整行把按钮挤出首屏 */
+.scopes .chip svg{ display:block; width:12px; height:12px; color:#059669; flex:none; }
+.btn.ghost{ background:transparent; color:var(--dim); border:1px solid var(--border);
+  box-shadow:none; margin-top:10px; font-weight:600; }
+.btn.ghost:hover{ transform:none; background:rgba(0,0,0,.03); filter:none; box-shadow:none; }
+.legal{ margin-top:18px; text-align:center; font-size:12px; color:var(--dim); line-height:1.7; }
+.legal a{ color:var(--brand); text-decoration:none; }
+.legal a:hover{ text-decoration:underline; }
+.notice{ margin-top:12px; padding:12px 14px; border-radius:12px; font-size:12px; line-height:1.6;
   background:rgba(10,102,194,.06); border:1px solid rgba(10,102,194,.16); color:#0b4c8c; }
 .btn{ width:100%; padding:14px; border:none; border-radius:12px; cursor:pointer;
   font-size:15px; font-weight:700; color:#fff; letter-spacing:.4px;
@@ -728,11 +759,12 @@ def _build_scope_chips(scope: str) -> str:
     for s in (scope or "profile").split():
         label = SCOPE_LABELS.get(s, s)
         chips.append(
-            f'<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            f'<span class="chip" style="display:inline-flex;align-items:center;gap:5px;">'
+            f'<svg style="width:12px;height:12px;min-width:12px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
             f'stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'
             f'{label}</span>'
         )
-    return "".join(chips) or '<span class="chip">读取账号基本信息</span>'
+    return "".join(chips) or '<span class="chip">读取账号基本信息</span>' 
 
 
 def _consent_page(**kwargs) -> HTMLResponse:
