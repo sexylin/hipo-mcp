@@ -49,7 +49,7 @@ html,body{height:100%;}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
   background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center;
-  color:var(--text); overflow:hidden; position:relative;
+  color:var(--text); overflow-y:auto; overflow-x:hidden; position:relative; padding:32px 16px;
 }
 body::before{ content:""; position:fixed; inset:0; z-index:0;
   background:
@@ -62,9 +62,9 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
   background-size:46px 46px;
   -webkit-mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%);
   mask-image:radial-gradient(circle at 50% 50%,#000,transparent 78%); }
-.wrap{ position:relative; z-index:1; width:100%; max-width:404px; padding:24px; margin:0 auto; }
+.wrap{ position:relative; z-index:1; width:100%; max-width:436px; padding:0; margin:auto; }
 .card{ background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
-  padding:40px 36px 34px;
+  padding:30px 28px 26px;
   box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 8px 28px rgba(0,0,0,.06);
   -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); }
 .brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
@@ -103,6 +103,15 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
 .foot{ display:flex; align-items:center; justify-content:center; gap:7px;
   margin-top:24px; font-size:12px; color:var(--dim); }
 .foot svg{ width:13px; height:13px; }
+.app{ display:flex; align-items:center; gap:14px; margin-bottom:18px;
+  background:rgba(0,0,0,.02); border:1px solid var(--border); border-radius:16px; padding:14px 16px; }
+.app .ico{ width:40px; height:40px; border-radius:11px; flex:none;
+  background:linear-gradient(135deg,var(--brand),var(--brand2)); opacity:.9;
+  display:flex; align-items:center; justify-content:center; }
+.app .ico svg{ width:22px !important; height:22px !important; min-width:22px; max-width:22px; display:block; }
+.app .nm{ font-size:15px; font-weight:700; }
+.app .em{ font-size:12.5px; color:var(--dim); margin-top:2px; word-break:break-all; }
+
 .scopes{ margin-bottom:16px; text-align:left; }
 .scopes .t{ font-size:12px; font-weight:700; color:var(--dim); text-transform:uppercase;
   letter-spacing:1px; margin-bottom:10px; }
@@ -746,10 +755,10 @@ def _role_select_page(**kwargs) -> HTMLResponse:
 
 SCOPE_LABELS = {
     "profile": "读取账号基本信息",
-    "candidate:read": "查看你的求职档案",
-    "candidate:write": "更新你的求职档案（简历、技能、项目）",
+    "candidate:read": "查看求职档案",
+    "candidate:write": "编辑简历与项目实战",
     "employer:read": "查看招聘信息",
-    "employer:write": "发布与管理岗位、查看候选人",
+    "employer:write": "发布管理岗位与候选人",
 }
 
 
