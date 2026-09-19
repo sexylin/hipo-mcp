@@ -384,6 +384,9 @@ def market_analysis(ctx: Context, keyword: str = None, industry: str = None, loc
     name="import_resume",
     description=(
         "导入或更新求职者简历（需要 candidate 角色）。Agent 自行解析简历，完整传入结构化数据。\n"
+        "【工作经历字段规范】work_experiences 每项必须包含：company(公司名), role(岗位头衔，如'全栈工程师'/'区块链开发工程师'), "
+        "start_date(YYYY-MM), end_date(YYYY-MM或null表示至今), duration_months(整数月数，根据起止日期计算), "
+        "responsibilities(职责数组), tech_stack(技术栈数组), industry(行业)。切勿遗漏 role/duration_months/industry！\n"
         "【项目经历提取规则】如果简历或工作经历中包含独立作品、App/小程序、开源项目、商业落地专项等，"
         "请务必提炼并结构化传入 projects 字段（包含 name, role, start_date, end_date, description, responsibilities, achievements, tech_stack 等），切勿让 projects 为空！\n"
         "【附件上传规则】如果用户是从本地文件（PDF、Word docx/doc、图片等）导入，必须读取该文件的二进制内容并转为 Base64 字符串，"
