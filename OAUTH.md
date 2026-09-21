@@ -105,9 +105,15 @@ auth_code / access_token / refresh_token / pending_auth）与验证码限流计�
 均保存在进程内内存（`storage.py` 的 `MemoryStore`），单进程语义完全正确，
 **无需配置 Redis**。
 
-代价：`systemctl restart hipo-mcp`（部署、改配置、机器重启）会清空所有已签发
-token，已授权的 AI 客户端需重新走一遍授权。收到"刚授权又要重新授权"的反馈时，
-先确认是否刚重启过服务，再怀疑 bug。
+代价：`systemctl restart hipo-mcp` 会清空 MCP 进程内的 token 映射（`access_tokens` /
+`refresh_tokens` 等内存 dict），但**已授权客户端通常不会要求重新授权**：真正的
+token 由后端签发（`_exchange_backend_identity` → `/auth/oauth/exchange`），
+MCP 只保存映射。重启后客户端用手中的 refresh_token 走 `grant_type=refresh_token`
+→ `exchange_refresh_token` → 后端 `/auth/oauth/refresh` 自动换新，用户无感，
+只要后端 refresh_token 未过期（90 天）且 `MCP_INTERNAL_SECRET` 未变更。
+
+真正需要重新授权的场景仅三种：后端 refresh_token 过期或被吊销、
+`MCP_INTERNAL_SECRET` 变更导致握手失败、客户端未实现自动刷新。
 
 ### 扩容前必须配置 Redis
 
@@ -142,5 +148,6 @@ MCP 客户端在拿到 token 前会反复探测 `/mcp`，服务端如实回 401 
 操作"的时间窗内，`/sso` 回调完成后即消失，属协议正常握手，不必处理。
 
 需要排查的是另一类：**授权完成、token 有效期内仍持续 401**。单进程部署下
-通常是刚重启过服务；多 worker 部署下则是未配 Redis（见上）。
+通常是客户端的 refresh 流程失败（后端 refresh_token 过期/吊销，或
+`MCP_INTERNAL_SECRET` 变更）；多 worker 部署下则是未配 Redis（见上）。
 
