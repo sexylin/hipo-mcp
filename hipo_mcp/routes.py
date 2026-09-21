@@ -173,6 +173,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <input type="hidden" name="step" value="send_code">
       <input type="hidden" name="referral_code" value="{referral_code}">
       <input type="hidden" name="channel" value="{channel}">
+      <input type="hidden" name="referral_src_entity" value="{referral_src_entity}">
       <div class="field">
         <label for="email">邮箱地址</label>
         <div class="in-wrap">
@@ -322,6 +323,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <input type="hidden" name="role" value="{role}">
       <input type="hidden" name="referral_code" value="{referral_code}">
       <input type="hidden" name="channel" value="{channel}">
+      <input type="hidden" name="referral_src_entity" value="{referral_src_entity}">
       <div class="otp">
         <input type="text" name="code" placeholder="······" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autofocus required>
       </div>
@@ -432,6 +434,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <input type="hidden" name="role" value="candidate">
       <input type="hidden" name="referral_code" value="{referral_code}">
       <input type="hidden" name="channel" value="{channel}">
+      <input type="hidden" name="referral_src_entity" value="{referral_src_entity}">
       <button type="submit" class="role">
         <div class="row">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
@@ -458,6 +461,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <input type="hidden" name="role" value="employer">
       <input type="hidden" name="referral_code" value="{referral_code}">
       <input type="hidden" name="channel" value="{channel}">
+      <input type="hidden" name="referral_src_entity" value="{referral_src_entity}">
       <button type="submit" class="role alt">
         <div class="row">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6"/><path d="M3 7h18a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z"/><path d="M12 7v3M8 4h8v3H8z"/></svg></div>
@@ -614,6 +618,7 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       <input type="hidden" name="step" value="consent">
       <input type="hidden" name="referral_code" value="{referral_code}">
       <input type="hidden" name="channel" value="{channel}">
+      <input type="hidden" name="referral_src_entity" value="{referral_src_entity}">
       <button type="submit" class="btn">同意并授权</button>
     </form>
     <form method="POST" action="/authorize">
@@ -1001,6 +1006,7 @@ def login_page_route(provider):
                 message="",
                 referral_code=referral_code,
                 channel=channel,
+                referral_src_entity=referral_src_entity,
             )
 
         return _login_page(
@@ -1017,6 +1023,7 @@ def login_page_route(provider):
             client_name=getattr(client, "client_name", "") or "AI 助手（MCP 客户端）",
             referral_code=referral_code,
             channel=channel,
+            referral_src_entity=referral_src_entity,
         )
 
     return handler
@@ -1042,6 +1049,7 @@ def authorize_route(provider):
         # 裂变归因：表单 hidden 透传的邀请人标识，随 verify/role_select 带到后端
         referral_code = form.get("referral_code", "") or ""
         channel = form.get("channel", "") or ""
+        referral_src_entity = form.get("referral_src_entity", "") or ""
 
         client = await provider.get_client(client_id)
         if not client:
@@ -1093,6 +1101,7 @@ def authorize_route(provider):
             "role": role,
             "referral_code": referral_code,
             "channel": channel,
+            "referral_src_entity": referral_src_entity,
         }
 
         if step == "deny":
@@ -1134,7 +1143,14 @@ def authorize_route(provider):
                 async with httpx.AsyncClient(timeout=10.0) as hc:
                     resp = await hc.post(
                         f"{API_BASE}/auth/register-or-login",
-                        json={"email": email, "code": code, "role": role, "referral_code": referral_code or None, "channel": channel or None},
+                        json={
+                            "email": email,
+                            "code": code,
+                            "role": role,
+                            "referral_code": referral_code or None,
+                            "channel": channel or None,
+                            "source_entity": referral_src_entity or None,
+                        },
                     )
                     if resp.status_code != 200:
                         detail = resp.json().get("detail", {})
