@@ -916,6 +916,7 @@ def login_page_route(provider):
         # 裂变归因：透传邀请人标识（岗位分享 ref / 档案卡 referral），后续表单 hidden 携带
         referral_code = params.get("referral_code", "") or params.get("ref", "")
         channel = params.get("channel", "")
+        referral_src_entity = params.get("referral_src_entity", "") or ""
 
         client = await provider.get_client(client_id) if client_id else None
         # 容错机制：如果客户端传了合法 client_id (UUID格式) 且是本地 127.0.0.1 回调，
