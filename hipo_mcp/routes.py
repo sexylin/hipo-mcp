@@ -138,9 +138,16 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
       </div>
       <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
     </div>
+    <div class="steps-bar" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding:10px 14px; background:rgba(10,102,194,.05); border-radius:12px; font-size:11.5px; font-weight:500; color:#475569;">
+      <span style="color:#0a66c2; font-weight:600;">① 选定角色</span>
+      <span style="color:#cbd5e1;">→</span>
+      <span style="color:#0a66c2; font-weight:700;">② 验证邮箱完成注册</span>
+      <span style="color:#cbd5e1;">→</span>
+      <span style="color:#64748b;">③ 上传简历开启匹配</span>
+    </div>
     <div class="head">
-      <h2>授权连接你的 AI 助手</h2>
-      <p>通过邮箱验证码登录，安全连接 MCP 服务，让你的 Agent 替你处理招聘与求职。</p>
+      <h2>完成注册 · 开始 AI 职位匹配</h2>
+      <p>输入邮箱验证码完成身份验证，立即开启智能职位测算与简历解析。</p>
     </div>
     {message}
     <div class="app">
@@ -283,6 +290,13 @@ body::after{ content:""; position:fixed; inset:0; z-index:0; opacity:.45;
         <svg viewBox="0 0 64 64" fill="none"><path d="M17 14h9v14h12V14h9v36h-9V36H26v14h-9z" fill="#ffffff"/><circle cx="52" cy="12" r="6" fill="#ffffff"/></svg>
       </div>
       <div><h1>HiPo Work</h1><p>AI 招聘平台</p></div>
+    </div>
+    <div class="steps-bar" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding:10px 14px; background:rgba(10,102,194,.05); border-radius:12px; font-size:11.5px; font-weight:500; color:#475569;">
+      <span style="color:#0a66c2; font-weight:600;">① 选定角色</span>
+      <span style="color:#cbd5e1;">→</span>
+      <span style="color:#0a66c2; font-weight:700;">② 输入验证码</span>
+      <span style="color:#cbd5e1;">→</span>
+      <span style="color:#64748b;">③ 上传简历开启匹配</span>
     </div>
     <div class="head">
       <h2>输入验证码</h2>
@@ -755,8 +769,8 @@ def _role_select_page(**kwargs) -> HTMLResponse:
 
 SCOPE_LABELS = {
     "profile": "读取账号基本信息",
-    "candidate:read": "查看求职档案",
-    "candidate:write": "编辑简历与项目实战",
+    "candidate:read": "查看你的技术画像与匹配岗位",
+    "candidate:write": "安全保存并解析你上传的简历",
     "employer:read": "查看招聘信息",
     "employer:write": "发布管理岗位与候选人",
 }
