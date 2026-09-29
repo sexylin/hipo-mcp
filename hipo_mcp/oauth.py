@@ -34,6 +34,11 @@ ACCESS_TOKEN_EXPIRY = 15 * 60
 AUTH_CODE_EXPIRY = 5 * 60
 REFRESH_TOKEN_EXPIRY = 90 * 24 * 60 * 60
 
+# 后端内部端点（exchange / refresh）调用参数：
+# 同机回环，15s 单次超时 + 3 次重试，避免后端瞬时抖动导致用户被强制重新授权。
+BACKEND_TIMEOUT = float(os.environ.get("HIPO_BACKEND_TIMEOUT", "15"))
+BACKEND_MAX_RETRIES = max(1, int(os.environ.get("HIPO_BACKEND_RETRIES", "3")))
+
 logger = logging.getLogger(__name__)
 
 # These values intentionally mirror Backend's role/scope contract.
@@ -206,92 +211,116 @@ class HiPoOAuthProvider(OAuthProvider):
     ) -> dict:
         if not MCP_INTERNAL_SECRET:
             raise TokenError("invalid_grant", "HiPo OAuth internal secret is not configured")
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.post(
-                    f"{API_BASE}/auth/oauth/exchange",
-                    headers={"X-MCP-Internal-Secret": MCP_INTERNAL_SECRET},
-                    json={
-                        "user_id": user_id,
-                        "client_id": client_id,
-                        "role": role,
-                        "scopes": scopes,
-                    },
-                )
-            if response.status_code != 200:
-                # 注意：TokenError 的 error 必须是 SDK 的 TokenErrorCode 字面量之一
-                # （invalid_request / invalid_client / invalid_grant /
-                #   unauthorized_client / unsupported_grant_type / invalid_scope）。
-                # 曾用 "server_error"/"temporarily_unavailable"，它们只存在于
-                # AuthorizeError 的枚举里，用于 TokenError 会导致
-                # TokenErrorResponse 的 pydantic 校验失败 → /token 直接 500，
-                # 把「后端交换失败」的真实原因掩盖成 pydantic 报错。
-                # 这里用 invalid_grant（授权码换取 token 失败），
-                # 并把后端状态码与响应原文放进 error_description 便于排查。
-                detail = (response.text or "")[:300]
-                logger.error(
-                    "[oauth] backend exchange failed: status=%s body=%s",
-                    response.status_code,
-                    detail,
-                )
-                raise TokenError(
-                    "invalid_grant",
-                    f"HiPo OAuth token exchange failed (HTTP {response.status_code}): {detail}",
-                )
-            result = response.json()
-            if not result.get("access_token") or not result.get("refresh_token"):
-                raise TokenError(
-                    "invalid_grant",
-                    "HiPo OAuth token exchange returned no tokens",
-                )
-            return result
-        except TokenError:
-            raise
-        except Exception as exc:
-            # 后端不可达/超时：仍是「授权码无法兑换」，用合法的 invalid_grant，
-            # 原始异常写进描述，避免再次出现「错误码非法 → 500」。
-            logger.error("[oauth] backend exchange unreachable: %s", exc)
-            raise TokenError(
-                "invalid_grant",
-                f"HiPo OAuth backend is unavailable: {exc}",
-            ) from exc
+        return await self._call_backend(
+            path="/auth/oauth/exchange",
+            payload={
+                "user_id": user_id,
+                "client_id": client_id,
+                "role": role,
+                "scopes": scopes,
+            },
+            success_desc="HiPo OAuth token exchange",
+        )
 
     async def _refresh_backend_token(self, refresh_token: str, client_id: str) -> dict:
         if not MCP_INTERNAL_SECRET:
             raise TokenError("invalid_grant", "HiPo OAuth internal secret is not configured")
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.post(
-                    f"{API_BASE}/auth/oauth/refresh",
-                    headers={"X-MCP-Internal-Secret": MCP_INTERNAL_SECRET},
-                    json={"refresh_token": refresh_token, "client_id": client_id},
+        return await self._call_backend(
+            path="/auth/oauth/refresh",
+            payload={"refresh_token": refresh_token, "client_id": client_id},
+            success_desc="HiPo OAuth refresh",
+        )
+
+    async def _call_backend(
+        self, path: str, payload: dict, success_desc: str
+    ) -> dict:
+        """调用后端 OAuth 内部端点，带重试与完整异常日志。
+
+        关键实践：
+        - trust_env=False：MCP 与后端同机回环通信（127.0.0.1），
+          绝不能被系统/环境代理劫持；代理层可能返回 502 或直接挂起，
+          导致 ReadTimeout（其 str(exc) 为空，光看日志毫无信息量）。
+        - 重试 3 次：后端瞬时抖动（DB 慢/连接池/GIL）会导致单次
+          ReadTimeout，重试可自愈，避免用户每次都要重新授权。
+        - 日志用 repr/类型名：httpx 的 Timeout 异常 str 为空，
+          只打 %s 会得到 `unreachable:` 这种空尾行，查不出原因。
+        """
+        url = f"{API_BASE}{path}"
+        last_exc: Exception | None = None
+        for attempt in range(1, BACKEND_MAX_RETRIES + 1):
+            try:
+                async with httpx.AsyncClient(
+                    timeout=BACKEND_TIMEOUT, trust_env=False
+                ) as client:
+                    response = await client.post(
+                        url,
+                        headers={"X-MCP-Internal-Secret": MCP_INTERNAL_SECRET},
+                        json=payload,
+                    )
+            except Exception as exc:
+                last_exc = exc
+                logger.error(
+                    "[oauth] %s attempt %d/%d failed: type=%s str=%r",
+                    path,
+                    attempt,
+                    BACKEND_MAX_RETRIES,
+                    type(exc).__name__,
+                    str(exc),
                 )
+                continue
+
             if response.status_code != 200:
                 detail = (response.text or "")[:300]
                 logger.error(
-                    "[oauth] backend refresh failed: status=%s body=%s",
+                    "[oauth] %s failed: status=%s body=%s",
+                    path,
                     response.status_code,
                     detail,
                 )
                 raise TokenError(
                     "invalid_grant",
-                    f"HiPo OAuth refresh token is invalid (HTTP {response.status_code}): {detail}",
+                    f"{success_desc} failed (HTTP {response.status_code}): {detail}",
                 )
-            result = response.json()
-            if not result.get("access_token") or not result.get("refresh_token"):
+
+            try:
+                result = response.json()
+            except Exception as exc:
+                logger.error(
+                    "[oauth] %s invalid JSON: type=%s body=%s",
+                    path,
+                    type(exc).__name__,
+                    (response.text or "")[:300],
+                )
                 raise TokenError(
                     "invalid_grant",
-                    "HiPo OAuth refresh returned no tokens",
+                    f"{success_desc} returned non-JSON response",
+                ) from exc
+
+            if not result.get("access_token") or not result.get("refresh_token"):
+                logger.error(
+                    "[oauth] %s returned no tokens: body=%s",
+                    path,
+                    (response.text or "")[:300],
+                )
+                raise TokenError(
+                    "invalid_grant",
+                    f"{success_desc} returned no tokens",
                 )
             return result
-        except TokenError:
-            raise
-        except Exception as exc:
-            logger.error("[oauth] backend refresh unreachable: %s", exc)
-            raise TokenError(
-                "invalid_grant",
-                f"HiPo OAuth backend is unavailable: {exc}",
-            ) from exc
+
+        # 重试全部失败：如实带类型与 repr 落日志（避免空尾行）
+        logger.error(
+            "[oauth] %s unreachable after %d attempts: type=%s repr=%r",
+            path,
+            BACKEND_MAX_RETRIES,
+            type(last_exc).__name__ if last_exc else "Unknown",
+            repr(last_exc),
+        )
+        raise TokenError(
+            "invalid_grant",
+            f"HiPo OAuth backend is unreachable ({path}): "
+            f"{type(last_exc).__name__ if last_exc else 'unknown'}",
+        ) from last_exc
 
     @staticmethod
     def _subject(auth_code: AuthorizationCode) -> tuple[str, str]:
