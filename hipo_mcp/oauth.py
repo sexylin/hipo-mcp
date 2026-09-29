@@ -38,6 +38,15 @@ REFRESH_TOKEN_EXPIRY = 90 * 24 * 60 * 60
 # 同机回环，15s 单次超时 + 3 次重试，避免后端瞬时抖动导致用户被强制重新授权。
 BACKEND_TIMEOUT = float(os.environ.get("HIPO_BACKEND_TIMEOUT", "15"))
 BACKEND_MAX_RETRIES = max(1, int(os.environ.get("HIPO_BACKEND_RETRIES", "3")))
+# 是否让 httpx 读取环境代理（HTTP_PROXY/ALL_PROXY 等）。
+# 默认 False：后端是 127.0.0.1 回环地址，走代理会让连接被劫持/挂起，
+# 产生 ReadTimeout/ConnectTimeout（且这类异常 str 为空，日志看不出原因）。
+# 仅当后端确实要通过代理访问时，才设 HIPO_BACKEND_TRUST_ENV=true。
+BACKEND_TRUST_ENV = os.environ.get("HIPO_BACKEND_TRUST_ENV", "").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +259,7 @@ class HiPoOAuthProvider(OAuthProvider):
         for attempt in range(1, BACKEND_MAX_RETRIES + 1):
             try:
                 async with httpx.AsyncClient(
-                    timeout=BACKEND_TIMEOUT, trust_env=False
+                    timeout=BACKEND_TIMEOUT, trust_env=BACKEND_TRUST_ENV
                 ) as client:
                     response = await client.post(
                         url,
