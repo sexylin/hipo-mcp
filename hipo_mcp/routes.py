@@ -914,6 +914,7 @@ def login_page_route(provider):
         scope = params.get("scope", "")
         code_challenge = params.get("code_challenge", "")
         code_challenge_method = params.get("code_challenge_method", "")
+        response_type = params.get("response_type", "")
         email = params.get("email", "")
         role = params.get("role", "candidate")
         if role not in ("candidate", "employer"):
@@ -924,14 +925,22 @@ def login_page_route(provider):
         referral_src_entity = params.get("referral_src_entity", "") or ""
 
         client = await provider.get_client(client_id) if client_id else None
-        # 容错机制：如果客户端传了合法 client_id (UUID格式) 且是本地 127.0.0.1 回调，
-        # 但服务端内存/Redis 因重启或网络波动暂时未查到该 client，自动为其恢复注册，避免阻断授权。
-        if not client and client_id and redirect_uri and isinstance(redirect_uri, str) and ("127.0.0.1" in redirect_uri or "localhost" in redirect_uri):
+        # 容错机制：如果客户端传了合法 client_id (UUID格式)，但服务端内存/Redis
+        # 因重启或网络波动暂时未查到该 client，自动为其恢复注册，避免阻断授权。
+        # 注意：不能只放行 127.0.0.1/localhost —— 生产环境 redirect_uri 是
+        # 公网域名（如 https://hipowork.com/...），漏放行会导致
+        # 「GET /authorize 返回 400 Client not registered」，客户端拿不到
+        # 授权码 → 拿不到 token → /mcp 持续 401，且因为是「未注册」而
+        # 连登录页都到不了，用户表现为「无法认证登录」。
+        # 该容错等价于 RFC 6749 允许的公开客户端（PKCE, token_endpoint_auth_method=none）
+        # 自动注册；安全性由 redirect_uri 精确匹配 + PKCE S256 保证。
+        if not client and client_id and redirect_uri and response_type == "code":
             try:
                 import uuid
                 uuid.UUID(str(client_id))
                 from mcp.shared.auth import OAuthClientInformationFull
                 from pydantic import AnyUrl
+
                 recovered_client = OAuthClientInformationFull(
                     client_id=str(client_id),
                     client_name="hipo-agent-client",
@@ -939,12 +948,21 @@ def login_page_route(provider):
                     token_endpoint_auth_method="none",
                     grant_types=["authorization_code", "refresh_token"],
                     response_types=["code"],
-                    scope=str(scope or "profile candidate:read candidate:write employer:read employer:write"),
+                    scope=str(
+                        scope
+                        or "profile candidate:read candidate:write employer:read employer:write"
+                    ),
                 )
                 await provider.register_client(recovered_client)
                 client = recovered_client
-            except Exception:
-                pass
+            except Exception as exc:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "[oauth] client auto-recovery failed: client_id=%s err=%s",
+                    client_id,
+                    exc,
+                )
         if (
             not client
             or not state
