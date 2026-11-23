@@ -186,9 +186,28 @@ class HiPoOAuthProvider(OAuthProvider):
         allowed_role_scopes = ROLE_SCOPES[role]
         scopes = list(requested_scopes & allowed_role_scopes)
         if not scopes:
-            raise AuthorizeError("invalid_scope", "Requested scopes are not valid for this role")
-        if client.scope and not set(scopes).issubset(set(client.scope.split())):
-            raise AuthorizeError("invalid_scope", "Requested scope was not registered for this client")
+            # 请求的 scope 与该角色完全不重叠（例如 candidate 请求了 employer:read）。
+            # 与其把用户挡在门外，不如按角色默认 scope 授权 ——
+            # 角色已经在用户信息里定死了，多给不了权限，少给会让人用不了。
+            scopes = list(allowed_role_scopes)
+        # 客户端注册的 scope 比请求的窄时，**取交集**而不是报错。
+        # 依据 RFC 6749 §3.3：服务端可颁发比请求更窄的 scope，客户端应接受。
+        #
+        # 之前这里直接 raise invalid_scope，线上后果：
+        #   DCR 注册的 client 往往只带 scope=profile（或不带），
+        #   而客户端按自己支持的能力请求 profile candidate:read candidate:write ...
+        #   → 用户在授权页填完验证码，拿到一段 JSON：
+        #     {"error":"invalid_scope",
+        #      "error_description":"Requested scope was not registered for this client"}
+        #    并且因为是重定向式错误，页面直接白屏，用户完全不知道发生了什么。
+        #   实测有用户反馈此问题（cherry6991@qq.com）。
+        if client.scope:
+            registered = set(client.scope.split())
+            narrowed = [sc for sc in scopes if sc in registered]
+            if narrowed:
+                scopes = narrowed
+            # narrowed 为空时保持原样：注册 scope 与角色 scope 完全不重叠
+            # 说明注册信息本身有问题，此时按角色允许的给出，不阻断登录。
 
         code_value = f"hipo_ac_{secrets.token_urlsafe(32)}"
         self.auth_codes[code_value] = AuthorizationCode(
@@ -415,10 +434,14 @@ class HiPoOAuthProvider(OAuthProvider):
     async def exchange_refresh_token(
         self, client: OAuthClientInformationFull, refresh_token: RefreshToken, scopes: list
     ) -> OAuthToken:
+        # 刷新时同样只做收窄，不报错。
+        # 客户端刷新往往把「自己支持的 scope」整包再传一次，而实际授权的
+        # 只是其中一个子集（比如只拿到了 candidate:read）。
+        # 直接拒绝会导致用户的 token 到期后彻底连不上，且报错看不懂。
         original_scopes = set(refresh_token.scopes)
-        requested_scopes = set(scopes)
-        if not requested_scopes.issubset(original_scopes):
-            raise TokenError("invalid_scope", "Requested scopes exceed authorized scopes")
+        requested_scopes = set(scopes) & original_scopes
+        if not requested_scopes:
+            requested_scopes = original_scopes
 
         old_access_value = self._refresh_to_access.get(refresh_token.token)
         old_access = self.access_tokens.get(old_access_value) if old_access_value else None
