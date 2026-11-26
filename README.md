@@ -9,6 +9,7 @@
 [![OAuth 2.0](https://img.shields.io/badge/Auth-OAuth2.0-green)](https://oauth.net/2/)
 [![Registry](https://img.shields.io/badge/MCP%20Registry-io.github.sexylin%2Fhipo--work-orange)](https://registry.modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![mcptry](https://mcptry.com/badge/io.github.sexylin/hipo-work)](https://mcptry.com/servers/io.github.sexylin/hipo-work)
 
 **官网：** [https://hipowork.com](https://hipowork.com) · [https://www.hipowork.com](https://www.hipowork.com)  
 **远程 MCP 端点：** `https://mcp.hipowork.com/mcp`
